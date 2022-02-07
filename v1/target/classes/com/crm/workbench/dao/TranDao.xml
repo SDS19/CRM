@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.crm.workbench.dao.TranDao">
+	<insert id="add">
+        INSERT INTO t_tran(id,owner,money,name,expectedDate,customerId,stage,type,source,activityId,contactsId,createBy,createTime,description,contactSummary,nextContactTime)
+        VALUES(#{id},#{owner},#{money},#{name},#{expectedDate},#{customerId},#{stage},#{type},#{source},#{activityId},#{contactsId},#{createBy},#{createTime},#{description},#{contactSummary},#{nextContactTime})
+    </insert>
+    <select id="getTranById" resultType="tran">
+        SELECT
+            t.id id,
+            u.name owner,
+            t.money money,
+            t.name name,
+            t.expectedDate expectedDate,
+            c.name customerId,
+            t.stage stage,
+            t.type type,
+            t.source source,
+            a.name activityId,
+            s.fullname contactsId,
+            t.createBy createBy,
+            t.createTime createTime,
+            t.editBy editBy,
+            t.editTime editTime,
+            t.description description,
+            t.contactSummary contactSummary,
+            t.nextContactTime nextContactTime
+        FROM t_tran t JOIN t_user u ON t.owner = u.id
+        JOIN t_customer c ON t.customerId = c.id
+        LEFT JOIN t_activity a ON t.activityId = a.id
+        LEFT JOIN t_contacts s ON t.contactsId = s.id
+        WHERE t.id = #{id}
+    </select>
+  	<update id="changeStage">
+        UPDATE t_tran SET stage = #{stage}, editBy = #{editBy}, editTime = #{editTime} WHERE id = #{id}
+    </update>
+
+    <select id="total" resultType="int">
+        SELECT COUNT(id) FROM t_tran
+    </select>
+    <select id="dataList" resultType="map">
+        SELECT COUNT(*) AS value, stage AS name FROM t_tran GROUP BY stage
+    </select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

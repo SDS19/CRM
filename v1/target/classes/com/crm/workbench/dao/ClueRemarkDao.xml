@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.crm.workbench.dao.ClueRemarkDao">
+	<select id="getRemarksByclueId" resultType="clueRemark">
+        SELECT * FROM t_clue_remark WHERE clueId = #{cludId}
+    </select>
+    <delete id="delete">
+        DELETE FROM t_clue_remark WHERE id = #{id}
+    </delete>
+  	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
