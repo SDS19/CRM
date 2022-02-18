@@ -11,5 +11,4 @@ This CRM tools can be used to manage customer relationships across the entire cu
 - Frontend toolkit: **Bootstrap, jQuery**
 
 ## System Introduction
-![Login](https://user-images.githubusercontent.com/46221024/154694823-f42f2cf2-476d-4b15-99eb-b6ceeeef3ee4.JPG)
-
+![Login](https://user-images.githubusercontent.com/46221024/154696092-f75e905d-a21d-4089-9cbd-5d789ccbf256.JPG)
