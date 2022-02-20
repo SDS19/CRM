@@ -15,10 +15,6 @@ This CRM tools can be used to manage customer relationships across the entire cu
 
 
 ![Login](https://user-images.githubusercontent.com/46221024/154696092-f75e905d-a21d-4089-9cbd-5d789ccbf256.JPG)
-2. Market Activity
-
-
-![activity](https://user-images.githubusercontent.com/46221024/154838790-a857ebf8-b990-468c-8a56-fef8a51be50b.JPG)
-3. Clue
+2. Clue
 
 ![image](https://user-images.githubusercontent.com/46221024/154840400-8c834c87-0050-4824-ba80-76432dbe2e95.png)
