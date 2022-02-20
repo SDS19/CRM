@@ -1,5 +1,7 @@
 package com.crm.workbench.service;
 
+import com.crm.exceptions.DaoException;
+import com.crm.vo.Pagination;
 import com.crm.workbench.domain.Tran;
 import com.crm.workbench.domain.TranHistory;
 
@@ -7,14 +9,20 @@ import java.util.List;
 import java.util.Map;
 
 public interface TranService {
-    boolean add(Tran tran, String customerName);
+
+    void save(Tran tran) throws DaoException;
+
     Tran detail(String id);
 
-    List<TranHistory> getTranHistoryByTranId(String tranId);
+    Pagination<Tran> tranList(Tran tran) throws DaoException;
 
-    boolean changeStage(Tran tran);
+    List<TranHistory> historyList(String tranId);
 
-    int total();
+    void stage(Tran tran,TranHistory tranHistory) throws DaoException;
 
-    List<Map<String, Object>> dataList();
+    int max();
+
+    List<Map<String, String>> dataList();
+
+
 }

@@ -4,9 +4,10 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.crm.workbench.dao.ContactsRemarkDao">
-    <insert id="addContact">
-        INSERT INTO t_customer_remark(id,noteContent,createBy,createTime,editFlag,contactsId)
-        VALUES(#{id},#{noteContent},#{createBy},#{createTime},#{editFlag},#{contactsId},)
+
+    <insert id="insert">
+        INSERT INTO t_contacts_remark(id,noteContent,createBy,createTime,editFlag,contactsId)
+        VALUES(#{id},#{noteContent},#{createBy},#{createTime},'0',#{contactsId})
     </insert>
   	
 </mapper>

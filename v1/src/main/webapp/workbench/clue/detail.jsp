@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <% String base = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath() + "/"; %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <!DOCTYPE html>
 <html>
@@ -12,24 +13,20 @@
 
 <script type="text/javascript">
 
-	//By default hide the cancel and save button
 	var cancelAndSaveBtnDefault = true;
 	
 	$(function(){
+
 		$("#remark").focus(function(){
 			if(cancelAndSaveBtnDefault){
-				//设置remarkDiv的高度为130px
 				$("#remarkDiv").css("height","130px");
-				//显示
 				$("#cancelAndSaveBtn").show("2000");
 				cancelAndSaveBtnDefault = false;
 			}
 		});
 		
 		$("#cancelBtn").click(function(){
-			//显示
 			$("#cancelAndSaveBtn").hide();
-			//设置remarkDiv的高度为130px
 			$("#remarkDiv").css("height","90px");
 			cancelAndSaveBtnDefault = true;
 		});
@@ -37,7 +34,7 @@
 		$(".remarkDiv").mouseover(function(){
 			$(this).children("div").children("div").show();
 		});
-		
+
 		$(".remarkDiv").mouseout(function(){
 			$(this).children("div").children("div").hide();
 		});
@@ -45,23 +42,72 @@
 		$(".myHref").mouseover(function(){
 			$(this).children("span").css("color","red");
 		});
-		
+
 		$(".myHref").mouseout(function(){
 			$(this).children("span").css("color","#E6E6E6");
 		});
 
-		//checkbox
+		$("#remarkBody").on("mouseover",".remarkDiv",function(){
+			$(this).children("div").children("div").show();
+		})
+
+		$("#remarkBody").on("mouseout",".remarkDiv",function(){
+			$(this).children("div").children("div").hide();
+		})
+
+		/*---------- remark ----------*/
+
+		remarkList();
+
+		$("#saveRemarkBtn").click(function () {
+			$.ajax({
+				url: "clue/addRemark",
+				data: {
+					"noteContent":$.trim($("#remark").val()),
+					"clueId":"${clue.id}"
+				},
+				type: "post",
+				dataType: "json",
+				success: function (data) {
+					if (data!=null) remarkList();
+					else alert("Remark added failed!");
+				}
+			})
+		})
+
+		$("#updateRemarkBtn").click(function () {
+			var id = $("#remarkId").val();
+			$.ajax({
+				url: "clue/updateRemark",
+				data: {
+					"id": id,
+					"noteContent":$.trim($("#noteContent").val())
+				},
+				type: "post",
+				dataType: "json",
+				success: function (data) {
+					if (data!=null){
+						//update <h5> and <small>
+						$("#"+id+" h5").html(data.noteContent);
+						$("#"+id+" small").html(data.editTime+" by "+data.editBy);
+						$("#editRemarkModal").modal("hide");
+					} else alert("Remark updated failed!");
+				}
+			})
+		})
+
+		/*---------- activity ----------*/
+
+		activityList();
+
 		$("#checkAll").click(function () {
 			$("input[name=activityId]").prop("checked",this.checked);
-		})
+		})//checkbox for bind activity
+
 		$("#searchActivityList").on("click",$("input[name=activityId]"),function () {
 			$("#checkAll").prop("checked",$("input[name=activityId]").length==$("input[name=activityId]:checked").length);
 		})
 
-		//fresh the activity list
-		activityList();
-
-		//search activity without being bound with clue
 		$("#search-activity").keydown(function (event) {
 			if (event.keyCode==13) {
 				$.ajax({
@@ -75,21 +121,19 @@
 					success: function (data) {
 						var html = "";
 						$.each(data,function (i,obj) {
-							html += "<tr>"
-									+"<td><input name='activityId' value='"+obj.id+"' type='checkbox'/></td>"
+							html += "<tr><td><input name='activityId' value='"+obj.id+"' type='checkbox'/></td>"
 									+"<td>"+obj.name+"</td>"
 									+"<td>"+obj.startDate+"</td>"
 									+"<td>"+obj.endDate+"</td>"
-									+"<td>"+obj.owner+"</td>"
-									+"</tr>"
+									+"<td>"+obj.owner+"</td></tr>"
 						})
 						$("#searchActivityList").html(html);
 					}
 				})
 				return false;
 			}
-		})
-		//bind the activity with clue
+		})//search activity without being bound to clue
+
 		$("#bindBtn").click(function () {
 			var $activities = $("input[name=activityId]:checked");
 			if ($activities.length==0) {
@@ -107,15 +151,63 @@
 					success: function (data) {
 						if (data=="1") {
 							activityList();
+							//empty
 							$("#bundModal").modal("hide");
 						}else alert("Bind activities failed!")
 					}
 				})
 			}
 
+		})//bind the activity to clue
+
+		$("#editBtn").click(function () {
+			$.ajax({
+				url: "user/owner",
+				type: "get",
+				dataType: "json",
+				success: function (data) {
+					var html = "<option></option>";
+					$.each(data,function (i,obj) {
+						html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+					})
+					$("#edit-owner").html(html);
+					$.each(data,function (i,obj) {
+						if ("${clue.owner}"==obj.name) $("#edit-owner").val(obj.id);
+					})
+				}
+			})
+			$("#edit-appellation").val("${clue.appellation}");
+			$("#edit-state").val("${clue.state}");
+			$("#edit-source").val("${clue.source}");
+			$("#editClueModal").modal("show");
+		})
+
+		$("#updateBtn").click(function () { update(); })
+		/*$(window).keydown(function (event) {
+			if (event.keyCode==13) {
+				update();
+				return false;
+			}
+		})*/
+
+		$("#deleteBtn").click(function () {
+			if (confirm("Are you sure to delete activity?")) {
+				$.ajax({
+					url: "clue/delete",
+					data: { "id" : "${clue.id}" },
+					type: "post",
+					dataType: "json",
+					success: function (data) {
+						if (data=="1") window.location.href = "workbench/clue/index.jsp";
+						else alert("Clue delete failed!")
+					}
+				})
+			}
 		})
 	});
-	//activity list
+
+	/*---------- activity ----------*/
+
 	function activityList() {
 		$.ajax({
 			url: "clue/activity",
@@ -132,7 +224,7 @@
 							+"<td>"+obj.startDate+"</td>"
 							+"<td>"+obj.endDate+"</td>"
 							+"<td>"+obj.owner+"</td>"
-							+'<td><a href="javascript:void(0);" onclick="unbund(\''+obj.id+'\')"  style="text-decoration: none;"><span class="glyphicon glyphicon-remove"></span>解除关联</a></td>'
+							+'<td><a href="javascript:void(0);" onclick="unbind(\''+obj.id+'\')"  style="text-decoration: none;"><span class="glyphicon glyphicon-remove"></span> Unbind</a></td>'
 							+"</tr>"
 				})
 				$("#activityList").html(html);
@@ -140,18 +232,96 @@
 		})
 	}
 
-	function unbund(id) {
+	function update() {
+		$.ajax({
+			url:"clue/update",
+			data: {
+				"id":$("#edit-id").val(),
+				"owner":$.trim($("#edit-owner").val()),
+				"company":$.trim($("#edit-company").val()),
+				"appellation":$.trim($("#edit-appellation").val()),
+				"fullname":$.trim($("#edit-fullname").val()),
+				"job":$.trim($("#edit-job").val()),
+				"email":$.trim($("#edit-email").val()),
+				"phone":$.trim($("#edit-phone").val()),
+				"website":$.trim($("#edit-website").val()),
+				"mphone":$.trim($("#edit-mphone").val()),
+				"state":$.trim($("#edit-state").val()),
+				"source":$.trim($("#edit-source").val()),
+				"description":$.trim($("#edit-description").val()),
+				"contactSummary":$.trim($("#edit-contactSummary").val()),
+				"nextContactTime":$.trim($("#edit-nextContactTime").val()),
+				"address":$.trim($("#edit-address").val())
+			},
+			type:"post",
+			dataType:"json",
+			success:function (data) {
+				if (data=="1") {
+					alert("Clue update succeed!");
+					window.location.href = "clue/detail?id=${clue.id}";
+				} else alert("Clue update failed!");
+			}
+		})
+	}
+
+	function unbind(id) {
 		$.ajax({
 			url: "clue/unbind",
-			data: {
-				"id": id
-			},
+			data: { "id": id },
 			type: "post",
 			dataType: "text",
 			success: function (data) {
-				if (data=="1") {
-					activityList();
-				}else alert("Unbund failed!")
+				if (data=="1") activityList();
+				else alert("Unbind failed!")
+			}
+		})
+	}
+
+	/*---------- remark ----------*/
+
+	function remarkList() {
+		$.ajax({
+			url: "clue/remark",
+			data: { "clueId": "${clue.id}" },
+			type: "get",
+			dataType: "json",
+			success: function (data) {
+				var html = "";
+				$.each(data,function (i,obj) {
+					html += '<div id="'+obj.id+'" class="remarkDiv" style="height: 60px;">'
+							+'<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">'
+							+'<div style="position: relative; top: -40px; left: 40px;" >'
+							+'<h5>'+obj.noteContent+'</h5>'
+							+'<font color="gray">Clue</font>'
+							+'<font color="gray">-</font> <b>${clue.appellation} ${clue.fullname} - ${clue.company}</b>'
+							+'<small style="color: gray;"> '+(obj.editFlag==0 ? obj.createTime : obj.editTime)+' by '+(obj.editFlag==0 ? obj.createBy : obj.editBy)+'</small>'
+							+'<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">'
+							+'<a class="myHref" href="javascript:void(0);" onclick="edit(\''+obj.id+'\')"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #FF0000;"></span></a>'
+							+'&nbsp;&nbsp;&nbsp;&nbsp;'
+							+'<a class="myHref" href="javascript:void(0);" onclick="remove(\''+obj.id+'\')"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #FF0000;"></span></a>'
+							+'</div></div></div>';
+				})
+				$("#remarkList").html(html);
+				$("#remark").val("");
+			}
+		})
+	}
+
+	function edit(id) {
+		$("#remarkId").val(id);
+		$("#noteContent").val($("#"+id+" h5").html());
+		$("#editRemarkModal").modal("show");
+	}
+
+	function remove(id) {
+		$.ajax({
+			url: "clue/removeRemark",
+			data: { "id": id },
+			type: "post",
+			dataType: "json",
+			success: function (data) {
+				if (data=="1") $("#"+id).remove();
+				else alert("Remove remark failed!");
 			}
 		})
 	}
@@ -160,6 +330,38 @@
 
 </head>
 <body>
+
+	<!-- Edit Activity Remark Modal -->
+	<div class="modal fade" id="editRemarkModal" role="dialog">
+
+		<!-- remark id -->
+		<input id="remarkId" type="hidden" name="id" >
+
+		<div class="modal-dialog" role="document" style="width: 40%;">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">
+						<span aria-hidden="true">×</span>
+					</button>
+					<h4 class="modal-title" id="ModalLabel">Update Remark</h4>
+				</div>
+				<div class="modal-body">
+					<form class="form-horizontal" role="form">
+						<div class="form-group">
+							<label for="noteContent" class="col-sm-2 control-label">Content</label>
+							<div class="col-sm-10" style="width: 81%;">
+								<textarea class="form-control" rows="3" id="noteContent"></textarea>
+							</div>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+					<button id="updateRemarkBtn" type="button" class="btn btn-primary">Update</button>
+				</div>
+			</div>
+		</div>
+</div>
 
 	<!-- bind activity modal -->
 	<div class="modal fade" id="bundModal" role="dialog">
@@ -204,7 +406,7 @@
 		</div>
 	</div>
 
-    <!-- 修改线索的模态窗口 -->
+    <!-- edit clue modal -->
     <div class="modal fade" id="editClueModal" role="dialog">
         <div class="modal-dialog" role="document" style="width: 90%;">
             <div class="modal-content">
@@ -212,113 +414,94 @@
                     <button type="button" class="close" data-dismiss="modal">
                         <span aria-hidden="true">×</span>
                     </button>
-                    <h4 class="modal-title" id="myModalLabel">修改线索</h4>
+                    <h4 class="modal-title" id="myModalLabel">Edit Clue</h4>
                 </div>
                 <div class="modal-body">
                     <form class="form-horizontal" role="form">
-
+						<input id="edit-id" type="hidden" value="${clue.id}"/>
                         <div class="form-group">
-                            <label for="edit-clueOwner" class="col-sm-2 control-label">所有者<span style="font-size: 15px; color: red;">*</span></label>
+                            <label for="edit-owner" class="col-sm-2 control-label">Owner<span style="font-size: 15px; color: red;">*</span></label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <select class="form-control" id="edit-clueOwner">
-                                    <option>zhangsan</option>
-                                    <option>lisi</option>
-                                    <option>wangwu</option>
+                                <select class="form-control" id="edit-owner">
+
                                 </select>
                             </div>
-                            <label for="edit-company" class="col-sm-2 control-label">公司<span style="font-size: 15px; color: red;">*</span></label>
+                            <label for="edit-company" class="col-sm-2 control-label">Company<span style="font-size: 15px; color: red;">*</span></label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-company" value="动力节点">
+                                <input type="text" class="form-control" id="edit-company" value="${clue.company}" />
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-call" class="col-sm-2 control-label">称呼</label>
+                            <label for="edit-appellation" class="col-sm-2 control-label">Appellation</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <select class="form-control" id="edit-call">
+                                <select class="form-control" id="edit-appellation">
                                     <option></option>
-                                    <option selected>先生</option>
-                                    <option>夫人</option>
-                                    <option>女士</option>
-                                    <option>博士</option>
-                                    <option>教授</option>
+									<c:forEach items="${appellation}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
                                 </select>
                             </div>
-                            <label for="edit-surname" class="col-sm-2 control-label">姓名<span style="font-size: 15px; color: red;">*</span></label>
+                            <label for="edit-fullname" class="col-sm-2 control-label">Fullname<span style="font-size: 15px; color: red;">*</span></label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-surname" value="李四">
+                                <input type="text" class="form-control" id="edit-fullname" value="${clue.fullname}">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-job" class="col-sm-2 control-label">职位</label>
+                            <label for="edit-job" class="col-sm-2 control-label">Job</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-job" value="CTO">
+                                <input type="text" class="form-control" id="edit-job" value="${clue.job}">
                             </div>
-                            <label for="edit-email" class="col-sm-2 control-label">邮箱</label>
+                            <label for="edit-email" class="col-sm-2 control-label">E-mail</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-email" value="lisi@bjpowernode.com">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="edit-phone" class="col-sm-2 control-label">公司座机</label>
-                            <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-phone" value="010-84846003">
-                            </div>
-                            <label for="edit-website" class="col-sm-2 control-label">公司网站</label>
-                            <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-website" value="http://www.bjpowernode.com">
+                                <input type="text" class="form-control" id="edit-email" value="${clue.email}">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-mphone" class="col-sm-2 control-label">手机</label>
+                            <label for="edit-phone" class="col-sm-2 control-label">Phone</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-mphone" value="12345678901">
+                                <input type="text" class="form-control" id="edit-phone" value="${clue.phone}"/>
                             </div>
-                            <label for="edit-status" class="col-sm-2 control-label">线索状态</label>
+                            <label for="edit-website" class="col-sm-2 control-label">Website</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <select class="form-control" id="edit-status">
+                                <input type="text" class="form-control" id="edit-website" value="${clue.website}"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-mphone" class="col-sm-2 control-label">Mobil Phone</label>
+                            <div class="col-sm-10" style="width: 300px;">
+                                <input type="text" class="form-control" id="edit-mphone" value="${clue.mphone}"/>
+                            </div>
+                            <label for="edit-state" class="col-sm-2 control-label">Clue State</label>
+                            <div class="col-sm-10" style="width: 300px;">
+                                <select class="form-control" id="edit-state">
                                     <option></option>
-                                    <option>试图联系</option>
-                                    <option>将来联系</option>
-                                    <option selected>已联系</option>
-                                    <option>虚假线索</option>
-                                    <option>丢失线索</option>
-                                    <option>未联系</option>
-                                    <option>需要条件</option>
+									<c:forEach items="${clueState}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
                                 </select>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-source" class="col-sm-2 control-label">线索来源</label>
+                            <label for="edit-source" class="col-sm-2 control-label">Clue Source</label>
                             <div class="col-sm-10" style="width: 300px;">
                                 <select class="form-control" id="edit-source">
                                     <option></option>
-                                    <option selected>广告</option>
-                                    <option>推销电话</option>
-                                    <option>员工介绍</option>
-                                    <option>外部介绍</option>
-                                    <option>在线商场</option>
-                                    <option>合作伙伴</option>
-                                    <option>公开媒介</option>
-                                    <option>销售邮件</option>
-                                    <option>合作伙伴研讨会</option>
-                                    <option>内部研讨会</option>
-                                    <option>交易会</option>
-                                    <option>web下载</option>
-                                    <option>web调研</option>
-                                    <option>聊天</option>
+									<c:forEach items="${source}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
                                 </select>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-describe" class="col-sm-2 control-label">描述</label>
+                            <label for="edit-description" class="col-sm-2 control-label">Description</label>
                             <div class="col-sm-10" style="width: 81%;">
-                                <textarea class="form-control" rows="3" id="edit-describe">这是一条线索的描述信息</textarea>
+                                <textarea class="form-control" rows="3" id="edit-description">${clue.description}</textarea>
                             </div>
                         </div>
 
@@ -326,15 +509,15 @@
 
                         <div style="position: relative;top: 15px;">
                             <div class="form-group">
-                                <label for="edit-contactSummary" class="col-sm-2 control-label">联系纪要</label>
+                                <label for="edit-contactSummary" class="col-sm-2 control-label">Contact Summary</label>
                                 <div class="col-sm-10" style="width: 81%;">
-                                    <textarea class="form-control" rows="3" id="edit-contactSummary">这个线索即将被转换</textarea>
+                                    <textarea class="form-control" rows="3" id="edit-contactSummary">${clue.contactSummary}</textarea>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="edit-nextContactTime" class="col-sm-2 control-label">下次联系时间</label>
+                                <label for="edit-nextContactTime" class="col-sm-2 control-label">Next Contact Time</label>
                                 <div class="col-sm-10" style="width: 300px;">
-                                    <input type="text" class="form-control" id="edit-nextContactTime" value="2017-05-01">
+                                    <input type="text" class="form-control" id="edit-nextContactTime" value="${clue.nextContactTime}"/>
                                 </div>
                             </div>
                         </div>
@@ -343,9 +526,9 @@
 
                         <div style="position: relative;top: 20px;">
                             <div class="form-group">
-                                <label for="edit-address" class="col-sm-2 control-label">详细地址</label>
+                                <label for="edit-address" class="col-sm-2 control-label">Address</label>
                                 <div class="col-sm-10" style="width: 81%;">
-                                    <textarea class="form-control" rows="1" id="edit-address">北京大兴区大族企业湾</textarea>
+                                    <textarea class="form-control" rows="1" id="edit-address">${clue.address}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -353,35 +536,35 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">更新</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button id="updateBtn" type="button" class="btn btn-primary" data-dismiss="modal">Update</button>
                 </div>
             </div>
         </div>
     </div>
 
-	<!-- 返回按钮 -->
+	<!-- back button -->
 	<div style="position: relative; top: 35px; left: 10px;">
 		<a href="javascript:void(0);" onclick="window.history.back();"><span class="glyphicon glyphicon-arrow-left" style="font-size: 20px; color: #DDDDDD"></span></a>
 	</div>
 	
-	<!-- 大标题 -->
+	<!-- titel -->
 	<div style="position: relative; left: 40px; top: -30px;">
 		<div class="page-header">
-			<h3>${clue.fullname}${clue.appellation} <small>${clue.company}</small></h3>
+			<h3>${clue.appellation}${clue.fullname}<small>&nbsp;&nbsp;${clue.company}</small></h3>
 		</div>
 		<div style="position: relative; height: 50px; width: 500px;  top: -72px; left: 700px;">
 			<button type="button" class="btn btn-default" onclick="window.location.href='workbench/clue/convert.jsp?id=${clue.id}&fullname=${clue.fullname}&appellation=${clue.appellation}&company=${clue.company}&owner=${clue.owner}';"><span class="glyphicon glyphicon-retweet"></span> Convert</button>
-			<button type="button" class="btn btn-default" data-toggle="modal" data-target="#editClueModal"><span class="glyphicon glyphicon-edit"></span> Edit</button>
-			<button type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> Delete</button>
+			<button id="editBtn" type="button" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span> Edit</button>
+			<button id="deleteBtn" type="button" class="btn btn-danger" ><span class="glyphicon glyphicon-minus"></span> Delete</button>
 		</div>
 	</div>
 	
-	<!-- 详细信息 -->
+	<!-- details -->
 	<div style="position: relative; top: -70px;">
 		<div style="position: relative; left: 40px; height: 30px;">
 			<div style="width: 300px; color: gray;">Fullname</div>
-			<div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${clue.fullname}${clue.appellation}</b></div>
+			<div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${clue.appellation} ${clue.fullname}</b></div>
 			<div style="width: 300px;position: relative; left: 450px; top: -40px; color: gray;">Owner</div>
 			<div style="width: 300px;position: relative; left: 650px; top: -60px;"><b>${clue.owner}</b></div>
 			<div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px;"></div>
@@ -406,7 +589,7 @@
 		<div style="position: relative; left: 40px; height: 30px; top: 30px;">
 			<div style="width: 300px; color: gray;">Website</div>
 			<div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${clue.website}&nbsp;&nbsp;</b></div>
-			<div style="width: 300px;position: relative; left: 450px; top: -40px; color: gray;">Mobil phone</div>
+			<div style="width: 300px;position: relative; left: 450px; top: -40px; color: gray;">Mobil Phone</div>
 			<div style="width: 300px;position: relative; left: 650px; top: -60px;"><b>${clue.mphone}</b></div>
 			<div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px;"></div>
 			<div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -60px; left: 450px;"></div>
@@ -433,7 +616,7 @@
 			<div style="width: 300px; color: gray;">Description</div>
 			<div style="width: 630px;position: relative; left: 200px; top: -20px;">
 				<b>
-					${clue.description}
+					${clue.description}&nbsp;&nbsp;
 				</b>
 			</div>
 			<div style="height: 1px; width: 850px; background: #D5D5D5; position: relative; top: -20px;"></div>
@@ -448,7 +631,7 @@
 			<div style="height: 1px; width: 850px; background: #D5D5D5; position: relative; top: -20px;"></div>
 		</div>
 		<div style="position: relative; left: 40px; height: 30px; top: 90px;">
-			<div style="width: 300px; color: gray;">Next contact time</div>
+			<div style="width: 300px; color: gray;">Next Contact Time</div>
 			<div style="width: 300px;position: relative; left: 200px; top: -20px;"><b>${clue.nextContactTime}</b></div>
 			<div style="height: 1px; width: 400px; background: #D5D5D5; position: relative; top: -20px; "></div>
 		</div>
@@ -463,52 +646,27 @@
         </div>
 	</div>
 	
-	<!-- 备注 -->
-	<div style="position: relative; top: 40px; left: 40px;">
+	<!-- remark -->
+	<div id="remarkBody" style="position: relative; top: 40px; left: 40px;">
 		<div class="page-header">
 			<h4>Remark</h4>
 		</div>
 		
-		<!-- 备注1 -->
-		<div class="remarkDiv" style="height: 60px;">
-			<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">
-			<div style="position: relative; top: -40px; left: 40px;" >
-				<h5>哎呦！</h5>
-				<font color="gray">线索</font> <font color="gray">-</font> <b>李四先生-动力节点</b> <small style="color: gray;"> 2017-01-22 10:10:10 由zhangsan</small>
-				<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #E6E6E6;"></span></a>
-					&nbsp;&nbsp;&nbsp;&nbsp;
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #E6E6E6;"></span></a>
-				</div>
-			</div>
-		</div>
-		
-		<!-- 备注2 -->
-		<div class="remarkDiv" style="height: 60px;">
-			<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">
-			<div style="position: relative; top: -40px; left: 40px;" >
-				<h5>呵呵！</h5>
-				<font color="gray">线索</font> <font color="gray">-</font> <b>李四先生-动力节点</b> <small style="color: gray;"> 2017-01-22 10:20:10 由zhangsan</small>
-				<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #E6E6E6;"></span></a>
-					&nbsp;&nbsp;&nbsp;&nbsp;
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #E6E6E6;"></span></a>
-				</div>
-			</div>
-		</div>
+		<!-- remark 1~n -->
+		<div id="remarkList"></div>
 		
 		<div id="remarkDiv" style="background-color: #E6E6E6; width: 870px; height: 90px;">
 			<form role="form" style="position: relative;top: 10px; left: 10px;">
-				<textarea id="remark" class="form-control" style="width: 850px; resize : none;" rows="2"  placeholder="添加备注..."></textarea>
-				<p id="cancelAndSaveBtn" style="position: relative;left: 737px; top: 10px; display: none;">
-					<button id="cancelBtn" type="button" class="btn btn-default">取消</button>
-					<button type="button" class="btn btn-primary">保存</button>
+				<textarea id="remark" class="form-control" style="width: 850px; resize : none;" rows="2"  placeholder="Add remark..."></textarea>
+				<p id="cancelAndSaveBtn" style="position: relative;left: 710px; top: 10px; display: none;">
+					<button id="cancelBtn" type="button" class="btn btn-default">Cancel</button>
+					<button id="saveRemarkBtn" type="button" class="btn btn-primary">Save</button>
 				</p>
 			</form>
 		</div>
 	</div>
 	
-	<!-- 市场活动 -->
+	<!-- activity -->
 	<div>
 		<div style="position: relative; top: 60px; left: 40px;">
 			<div class="page-header">
@@ -532,7 +690,7 @@
 			</div>
 			
 			<div>
-				<a href="javascript:void(0);" data-toggle="modal" data-target="#bundModal" style="text-decoration: none;"><span class="glyphicon glyphicon-plus"></span>关联市场活动</a>
+				<a href="javascript:void(0);" data-toggle="modal" data-target="#bundModal" style="text-decoration: none;"><span class="glyphicon glyphicon-plus"></span> Bind Activity</a>
 			</div>
 		</div>
 	</div>

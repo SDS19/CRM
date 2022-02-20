@@ -2,26 +2,42 @@ package com.crm.workbench.domain;
 
 public class Clue {
 	
-	private String id;	//主键
-	private String fullname;	//全名（人的名字）
-	private String appellation;	//称呼
-	private String owner;	//所有者
-	private String company;	//公司名称
-	private String job;	//职业
-	private String email;	//邮箱
-	private String phone;	//公司电话
-	private String website;	//公司网站
-	private String mphone;	//手机
-	private String state;	//状态
-	private String source;	//来源
-	private String createBy;	//创建人
-	private String createTime;	//创建时间
-	private String editBy;	//修改人
-	private String editTime;	//修改时间
-	private String description;	//描述
-	private String contactSummary;	//联系纪要
-	private String nextContactTime;	//下次联系时间
-	private String address;	//地址
+	private String id;
+	private String fullname;
+	private String appellation;
+	private String owner;
+	private String company;
+	private String job;
+	private String email;
+	private String phone;
+	private String website;
+	private String mphone;
+	private String state;
+	private String source;
+	private String createBy;
+	private String createTime;
+	private String editBy;
+	private String editTime;
+	private String description;
+	private String contactSummary;
+	private String nextContactTime;
+	private String address;
+
+	//for pagination
+	private int pageCount;
+	private int pageSize;
+	public int getPageCount() {
+		return pageCount;
+	}
+	public void setPageCount(int pageCount) {
+		this.pageCount = pageCount;
+	}
+	public int getPageSize() {
+		return pageSize;
+	}
+	public void setPageSize(int pageSize) {
+		this.pageSize = pageSize;
+	}
 	
 	public String getId() {
 		return id;
@@ -143,8 +159,4 @@ public class Clue {
 	public void setAddress(String address) {
 		this.address = address;
 	}
-	
-	
-
-	
 }

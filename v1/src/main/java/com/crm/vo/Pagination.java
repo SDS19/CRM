@@ -21,4 +21,12 @@ public class Pagination<E> {
     public void setDataList(List<E> dataList) {
         this.dataList = dataList;
     }
+
+    public Pagination() {
+    }
+
+    public Pagination(int total, List<E> dataList) {
+        this.total = total;
+        this.dataList = dataList;
+    }
 }

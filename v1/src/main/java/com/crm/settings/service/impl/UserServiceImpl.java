@@ -12,8 +12,10 @@ import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
+
     @Autowired
     private UserDao userDao;
+
     @Override
     public User login(User user) throws LoginException {
         User result = userDao.login(user);
@@ -24,15 +26,8 @@ public class UserServiceImpl implements UserService {
         if ("0".equals(result.getLockState())) throw new LoginException("Account is locked!");
         //allowed IPs
         String ip = result.getAllowIps();
-        if (ip!=null && ip!="") {
-            if (!result.getAllowIps().contains(user.getAllowIps())) throw new LoginException("This IP is restricted to login!");
-        }
+        if (ip!=null && ip!="") if (!result.getAllowIps().contains(user.getAllowIps())) throw new LoginException("This IP is restricted to login!");
         return result;
-    }
-
-    @Override
-    public List<User> selectNames() {
-        return userDao.selectNames();
     }
 
     @Override

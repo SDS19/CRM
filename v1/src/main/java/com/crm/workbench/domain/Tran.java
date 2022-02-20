@@ -21,6 +21,28 @@ public class Tran {
 	private String contactSummary;
 	private String nextContactTime;
 	private String possibility;
+
+	//for pagination
+	private int pageNo;
+	private int pageSize;
+	private int pageCount = (pageNo-1)*pageSize;
+
+	public int getPageCount() {
+		return pageCount;
+	}
+
+	public int getPageNo() {
+		return pageNo;
+	}
+	public void setPageNo(int pageNo) {
+		this.pageNo = pageNo;
+	}
+	public int getPageSize() {
+		return pageSize;
+	}
+	public void setPageSize(int pageSize) {
+		this.pageSize = pageSize;
+	}
 	
 	public String getId() {
 		return id;

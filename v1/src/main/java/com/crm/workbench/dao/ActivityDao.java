@@ -3,26 +3,30 @@ package com.crm.workbench.dao;
 import com.crm.workbench.domain.Activity;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public interface ActivityDao {
-    int insertActivity(Activity activity);
 
-    int total();
+    int insert(Activity activity);
+
+    int total(Activity activity);
 
     List<Activity> activityList(Activity activity);
 
-    int deleteActivities(String[] ids);
+    int delete(String[] ids);
 
-    Activity editActivity(String id);
+    Activity edit(String id);
 
-    int updateActivity(Activity activity);
+    int update(Activity activity);
 
-    Activity selectActivity(String id);
+    Activity selectById(String id);
 
-    List<Activity> getActivitiesByClueId(String clueId);
+    List<Activity> selectByClueId(String clueId);
 
-    List<Activity> getActivitiesByName(@Param("name") String name,@Param("clueId") String clueId);
-    List<Activity> getActivitiesByName1(String name);
+    List<Activity> selectByNameForClue(HashMap<String,String> map);
+
+    List<Activity> selectByNameForTran(String name);
+
 }

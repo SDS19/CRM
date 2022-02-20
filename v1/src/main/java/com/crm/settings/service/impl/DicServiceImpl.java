@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DicServiceImpl implements DicService {
+
     @Autowired
     private DicTypeDao dicTypeDao;
     @Autowired
@@ -23,8 +24,7 @@ public class DicServiceImpl implements DicService {
         Map<String,List<DicValue>> map = new HashMap<>();
         for (DicType type:typeList) {
             String code = type.getCode();
-            List<DicValue> valueList = dicValueDao.getValues(code);
-            map.put(code,valueList);
+            map.put(code,dicValueDao.getValues(code));
         }
         return map;
     }

@@ -28,11 +28,31 @@
 				pickerPosition: "bottom-left"
 			});
 
-			//create activity
-			$("#addBtn").click(function () {
-				//get owner name
+			//load activity list by default (pageNo:1, pageSize:5)
+			pageList(1,3);
+
+			//checkbox
+			$("#checkAll").click(function () {
+				$("input[name=check]").prop("checked",this.checked);
+			})
+			$("#tbody-activity").on("click",$("input[name=check]"),function () {
+				$("#checkAll").prop("checked",$("input[name=check]").length==$("input[name=check]:checked").length);
+			})
+
+			//query
+			$("#queryBtn").click(function () {
+				//save the query condition into hidden field
+				$("#hid-name").val($.trim($("#name").val()));
+				$("#hid-owner").val($.trim($("#owner").val()));
+				$("#hid-startDate").val($.trim($("#startDate").val()));
+				$("#hid-endDate").val($.trim($("#endDate").val()));
+				pageList(1,3);
+			});
+
+			//create
+			$("#addBtn").click(function () {//get owner name
 				$.ajax({
-					url:"user/getOwner",
+					url:"user/owner",
 					type:"get",
 					dataType:"json",
 					success:function (data) {
@@ -46,49 +66,63 @@
 					}
 				})
 			})
-
-			//save activity
 			$("#saveBtn").click(function () {
-				createActivity();
+				create();
 			})
 			$(window).keydown(function (event) {
-				if (event.keyCode==13) createActivity();
+				if (event.keyCode==13) create();
 			})
 
-			//load activity list by default (pageNo:1, pageSize:5)
-			pageList(1,3);
-
-			//query button
-			$("#queryBtn").click(function () {
-				//save the query condition into hidden field
-				$("#hid-name").val($.trim($("#name").val()));
-				$("#hid-owner").val($.trim($("#owner").val()));
-				$("#hid-startDate").val($.trim($("#startDate").val()));
-				$("#hid-endDate").val($.trim($("#endDate").val()));
-				pageList(1,3);
-			});
-
-			//checkbox
-			$("#checkAll").click(function () {
-				$("input[name='check']").prop("checked",this.checked);
+			//update
+			$("#editBtn").click(function () {
+				var $checked = $("input[name=check]:checked");
+				if ($checked.length==0) {
+					alert("None activity is selected!")
+				}else if ($checked.length>1){
+					alert("Only can update one activity a time!")
+				}else {
+					var id = "id="+$checked.val();
+					$.ajax({
+						url:"activity/edit",
+						data: id,
+						type:"get",
+						dataType:"json",
+						success:function (data) {
+							var html = "<option></option>";
+							$.each(data.list,function (i,obj) {
+								html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+							})
+							$("#edit-owner").html(html);
+							$("#edit-id").val(data.activity.id);
+							$("#edit-name").val(data.activity.name);
+							$("#edit-owner").val(data.activity.owner);
+							$("#edit-startDate").val(data.activity.startDate);
+							$("#edit-endDate").val(data.activity.endDate);
+							$("#edit-cost").val(data.activity.cost);
+							$("#edit-description").val(data.activity.description);
+							$("#editActivityModal").modal("show");
+						}
+					})
+				}
 			})
-			$("#tbody-activity").on("click",$("input[name=check]"),function () {
-				$("#checkAll").prop("checked",$("input[name=check]").length==$("input[name=check]:checked").length);
+			$("#updateBtn").click(function () {
+				update();
 			})
-			
-			//delete button
+			$(window).keydown(function (event) {
+				if (event.keyCode==13) update();
+			})
+
+			//delete
 			$("#deleteBtn").click(function () {
 				var checked = $("input[name=check]:checked");
 				if (checked.length==0) {
 					alert("None activities are selected!")
 				}else {
 					if (confirm("Are you sure to delete selected activities?")) {
-						var params = "";
+						var params = "_=_";
 						for (var i=0;i<checked.length;i++) {
-							params += "id="+checked[i].value;
-							if (i<checked.length-1) {
-								params += "&";
-							}
+							params += "&id="+checked[i].value;
+							//if (i<checked.length-1) params += "&";
 						}
 						$.ajax({
 							url:"activity/delete",
@@ -96,81 +130,16 @@
 							type:"post",
 							dataType:"json",
 							success:function (data) {
-								if (data=="1") {
-									pageList(1,$("#activityPage").bs_pagination('getOption', 'rowsPerPage'));
-								}else {
-									alert("Delete operation failed!");
-								}
+								if (data=="1") pageList(1,$("#activityPage").bs_pagination('getOption', 'rowsPerPage'));
+								else alert("Delete operation failed!");
 							}
 						})
 					}
 				}
-			})
-
-			//update
-			$("#editBtn").click(function () {
-				var $checked = $("input[name=check]:checked");
-				if ($checked.length==0) {
-					alert("None activities are selected!")
-				}else if ($checked.length>1){
-					alert("Only can update one activity a time!")
-				}else {
-					if (confirm("Are you sure to update selected activities?")) {
-						var id = "id="+$checked.val();
-						$.ajax({
-							url:"activity/edit",
-							data: id,
-							type:"get",
-							dataType:"json",
-							success:function (data) {
-								var html = "<option></option>";
-								$.each(data.list,function (i,obj) {
-									html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
-								})
-								$("#edit-owner").html(html);
-
-								$("#edit-id").val(data.activity.id);
-								$("#edit-name").val(data.activity.name);
-								$("#edit-owner").val(data.activity.owner);
-								$("#edit-startDate").val(data.activity.startDate);
-								$("#edit-endDate").val(data.activity.endDate);
-								$("#edit-cost").val(data.activity.cost);
-								$("#edit-description").val(data.activity.description);
-
-								$("#editActivityModal").modal("show");
-							}
-						})
-					}
-				}
-			})
-			$("#updateBtn").click(function () {
-				$.ajax({
-					url:"activity/update",
-					data: {
-						"id":$.trim($("#edit-id").val()),
-						"owner":$.trim($("#edit-owner").val()),
-						"name":$.trim($("#edit-name").val()),
-						"startDate":$.trim($("#edit-startDate").val()),
-						"endDate":$.trim($("#edit-endDate").val()),
-						"cost":$.trim($("#edit-cost").val()),
-						"description":$.trim($("#edit-description").val())
-					},
-					type:"post",
-					dataType:"json",
-					success:function (data) {
-						if (data=="1") {
-							alert("Activity is updated succeed!");
-							pageList($("#activityPage").bs_pagination('getOption', 'currentPage')
-									,$("#activityPage").bs_pagination('getOption', 'rowsPerPage'));
-							$("#editActivityModal").modal("hide");
-						} else {
-							alert("Activity is updated failed!");
-						}
-					}
-				})
 			})
 
 		});
+
 		function pageList(pageNo,pageSize) {
 			//empty checkbox
 			$("#checkAll").prop("checked",false);
@@ -180,7 +149,7 @@
 			$("#startDate").val($.trim($("#hid-startDate").val()));
 			$("#endDate").val($.trim($("#hid-endDate").val()));
 			$.ajax({
-				url:"activity/list",
+				url:"activity/activities",
 				data: {
 					"pageNo":pageNo,
 					"pageSize":pageSize,
@@ -192,37 +161,39 @@
 				type:"get",
 				dataType:"json",
 				success:function (data) {
-					var html = "";
-					$.each(data.dataList,function (i,obj) {
-						html += "<tr class='active'><td><input name='check' type='checkbox' value='"+obj.id+"'/></td>"
-								+"<td><a style='text-decoration: none; cursor: pointer;' onclick=window.location.href=\'activity/detail?id="+obj.id+"\';>"+obj.name+"</a></td>"
-								+"<td>"+obj.owner+"</td>"
-								+"<td>"+obj.startDate+"</td>"
-								+"<td>"+obj.endDate+"</td></tr>";
-					})
-					$("#tbody-activity").html(html);
-					var totalPages = data.total%pageSize==0 ? data.total/pageSize : Math.ceil(data.total/pageSize);
-					//bootstrap pagination
-					$("#activityPage").bs_pagination({
-						currentPage: pageNo,
-						rowsPerPage: pageSize,
-						maxRowsPerPage: 20,
-						totalPages: totalPages,
-						totalRows: data.total,
-						visiblePageLinks: 5,
-						showGoToPage: true,
-						showRowsPerPage: true,
-						showRowsInfo: true,
-						showRowsDefaultInfo: true,
-						onChangePage : function(event, data){
-							pageList(data.currentPage , data.rowsPerPage);
-						}
-					});
-
+					if (data!=null) {
+						var html = "";
+						$.each(data.dataList,function (i,obj) {
+							html += "<tr class='active'><td><input name='check' type='checkbox' value='"+obj.id+"'/></td>"
+									+"<td><a style='text-decoration: none; cursor: pointer;' onclick=window.location.href=\'activity/detail?id="+obj.id+"\';>"+obj.name+"</a></td>"
+									+"<td>"+obj.owner+"</td>"
+									+"<td>"+obj.startDate+"</td>"
+									+"<td>"+obj.endDate+"</td></tr>";
+						})
+						$("#tbody-activity").html(html);
+						var totalPages = data.total%pageSize==0 ? data.total/pageSize : Math.ceil(data.total/pageSize);
+						//bootstrap pagination
+						$("#activityPage").bs_pagination({
+							currentPage: pageNo,
+							rowsPerPage: pageSize,
+							maxRowsPerPage: 20,
+							totalPages: totalPages,
+							totalRows: data.total,
+							visiblePageLinks: 5,
+							showGoToPage: true,
+							showRowsPerPage: true,
+							showRowsInfo: true,
+							showRowsDefaultInfo: true,
+							onChangePage : function(event, data){
+								pageList(data.currentPage , data.rowsPerPage);
+							}
+						});
+					} else alert("Activities query failed!");
 				}
 			})
 		}
-		function createActivity() {
+
+		function create() {
 			$.ajax({
 				url:"activity/save",
 				data:{
@@ -246,6 +217,34 @@
 				}
 			})
 		}
+
+		function update() {
+			$.ajax({
+				url:"activity/update",
+				data: {
+					"id":$.trim($("#edit-id").val()),
+					"owner":$.trim($("#edit-owner").val()),
+					"name":$.trim($("#edit-name").val()),
+					"startDate":$.trim($("#edit-startDate").val()),
+					"endDate":$.trim($("#edit-endDate").val()),
+					"cost":$.trim($("#edit-cost").val()),
+					"description":$.trim($("#edit-description").val())
+				},
+				type:"post",
+				dataType:"json",
+				success:function (data) {
+					if (data=="1") {
+						alert("Activity update succeed!");
+						pageList($("#activityPage").bs_pagination('getOption', 'currentPage')
+								,$("#activityPage").bs_pagination('getOption', 'rowsPerPage'));
+						$("#editActivityModal").modal("hide");
+					} else {
+						alert("Activity update failed!");
+					}
+				}
+			})
+		}
+
 	</script>
 </head>
 <body>
@@ -346,18 +345,18 @@
 						<div class="form-group">
 							<label for="edit-startDate" class="col-sm-2 control-label">Start Date</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-startDate" name="startDate" />
+								<input type="text" class="form-control time" id="edit-startDate" name="startDate" readonly/>
 							</div>
 							<label for="edit-endDate" class="col-sm-2 control-label">End Date</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-endDate" name="endDate" />
+								<input type="text" class="form-control time" id="edit-endDate" name="endDate" readonly/>
 							</div>
 						</div>
 						
 						<div class="form-group">
 							<label for="edit-cost" class="col-sm-2 control-label">Cost</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-cost" name="Cost" />
+								<input type="text" class="form-control" id="edit-cost" name="cost" />
 							</div>
 						</div>
 						
@@ -372,8 +371,8 @@
 					
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-					<button id="updateBtn" type="button" class="btn btn-primary" data-dismiss="modal">更新</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+					<button id="updateBtn" type="button" class="btn btn-primary" data-dismiss="modal">Update</button>
 				</div>
 			</div>
 		</div>
@@ -448,7 +447,7 @@
 			</div>
 			<div style="height: 50px; position: relative;top: 30px;">
 				<div id="activityPage">
-
+					<!-- bootstrap pagination -->
 				</div>
 			</div>
 		</div>

@@ -9,6 +9,7 @@ public class TranHistory {
 	private String createTime;
 	private String createBy;
 	private String tranId;
+
 	private String possibility;//for "Transaction History" in workbench/transaction/detail.jsp
 	
 	public String getId() {

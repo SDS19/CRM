@@ -4,11 +4,13 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.crm.workbench.dao.TranHistoryDao">
-	<insert id="add">
-        INSERT INTo t_tran_history VALUES(#{id},#{stage},#{money},#{expectedDate},#{createBy},#{createTime},#{tranId})
+
+	<insert id="insert">
+        INSERT INTO t_tran_history VALUES(#{id},#{stage},#{money},#{expectedDate},#{createTime},#{createBy},#{tranId})
     </insert>
-    <select id="getTranHistoryByTranId" resultType="tranHistory">
-        SELECT * FROM t_tran_history WHERE tranId = #{tranId}
+
+    <select id="select" resultType="tranHistory">
+        SELECT * FROM t_tran_history WHERE tranId = #{tranId} ORDER BY createTime DESC
     </select>
   	
 </mapper>

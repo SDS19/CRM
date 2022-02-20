@@ -4,14 +4,17 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.crm.workbench.dao.CustomerDao">
-	<select id="getCustomerByName" resultType="customer">
+
+	<select id="select" resultType="customer">
         SELECT * FROM t_customer WHERE name = #{name}
     </select>
-    <insert id="addCustomer">
+
+    <insert id="insert">
         INSERT INTO t_customer(id,owner,name,website,phone,createBy,createTime,contactSummary,nextContactTime,description,address)
         VALUES(#{id},#{owner},#{name},#{website},#{phone},#{createBy},#{createTime},#{contactSummary},#{nextContactTime},#{description},#{address})
     </insert>
-    <select id="getCustomerName" resultType="string">
+
+    <select id="selectName" resultType="string">
         SELECT name from t_customer WHERE name LIKE CONCAT('%',#{name},'%')
     </select>
   	

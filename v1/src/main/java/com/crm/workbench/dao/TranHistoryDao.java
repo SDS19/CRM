@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface TranHistoryDao {
 
-    int add(TranHistory tranHistory);
-    List<TranHistory> getTranHistoryByTranId(String tranId);
+    int insert(TranHistory tranHistory);
+
+    List<TranHistory> select(String tranId);
 }

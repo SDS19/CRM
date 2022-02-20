@@ -9,27 +9,36 @@
 	<link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
 	<script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
-
+	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
+	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+	<link rel="stylesheet" type="text/css" href="jquery/bs_pagination/jquery.bs_pagination.min.css">
+	<script type="text/javascript" src="jquery/bs_pagination/jquery.bs_pagination.min.js"></script>
+	<script type="text/javascript" src="jquery/bs_pagination/en.js"></script>
 <script type="text/javascript">
 
-	//默认情况下取消和保存按钮是隐藏的
 	var cancelAndSaveBtnDefault = true;
 	
 	$(function(){
+
+		$(".time").datetimepicker({
+			minView: "month",
+			language:  'zh-CN',
+			format: 'yyyy-mm-dd',
+			autoclose: true,
+			todayBtn: true,
+			pickerPosition: "bottom-left"
+		});
+
 		$("#remark").focus(function(){
 			if(cancelAndSaveBtnDefault){
-				//设置remarkDiv的高度为130px
 				$("#remarkDiv").css("height","130px");
-				//显示
 				$("#cancelAndSaveBtn").show("2000");
 				cancelAndSaveBtnDefault = false;
 			}
 		});
 		
 		$("#cancelBtn").click(function(){
-			//显示
 			$("#cancelAndSaveBtn").hide();
-			//设置remarkDiv的高度为130px
 			$("#remarkDiv").css("height","90px");
 			cancelAndSaveBtnDefault = true;
 		});
@@ -37,7 +46,6 @@
 		$(".remarkDiv").mouseover(function(){
 			$(this).children("div").children("div").show();
 		});
-		
 		$(".remarkDiv").mouseout(function(){
 			$(this).children("div").children("div").hide();
 		});
@@ -45,14 +53,11 @@
 		$(".myHref").mouseover(function(){
 			$(this).children("span").css("color","red");
 		});
-		
 		$(".myHref").mouseout(function(){
 			$(this).children("span").css("color","#E6E6E6");
 		});
 
-        //remark info list
-        remarkList();
-
+		//update and delete icon
         $("#remarkBody").on("mouseover",".remarkDiv",function(){
             $(this).children("div").children("div").show();
         })
@@ -60,7 +65,52 @@
             $(this).children("div").children("div").hide();
         })
 
+        remarkList();
 
+        //edit activity
+        $("#editBtn").click(function () {
+            var id = "id=${activity.id}";
+            $.ajax({
+                url:"user/owner",
+                type:"get",
+                dataType:"json",
+                success:function (data) {
+                    var html = "<option></option>";
+                    $.each(data,function (i,obj) {
+                        html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+                    })
+                    $("#edit-owner").html(html);
+                    $.each(data,function (i,obj) {
+                        if ("${activity.owner}" == obj.name) $("#edit-owner").val(obj.id);
+                    })
+                    $("#editActivityModal").modal("show");
+                }
+            })
+        })
+		$("#updateBtn").click(function () { update(); })
+
+		$(window).keydown(function (event) {
+			if (event.keyCode==13) {
+				update();
+				return false;
+			}
+		})
+
+		//delete activity
+		$("#deleteBtn").click(function () {
+			if (confirm("Are you sure to delete activity?")) {
+				$.ajax({
+					url:"activity/delete",
+					data: { "id" : "${activity.id}" },
+					type:"post",
+					dataType:"json",
+					success:function (data) {
+						if (data=="1") window.location.href = "workbench/activity/index.jsp";
+						else alert("Delete operation failed!");
+					}
+				})
+			}
+		})
 
         //add remark
         $("#saveRemarkBtn").click(function () {
@@ -73,25 +123,13 @@
                 type: "post",
                 dataType: "json",
                 success: function (data) {
-                    if (data.success=="1") {
-                        var html = "";
-                        html += '<div id="'+data.remark.id+'" class="remarkDiv" style="height: 60px;">'
-                            +'<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">'
-                            +'<div style="position: relative; top: -40px; left: 40px;" >'
-                            +'<h5>'+data.remark.noteContent+'</h5>'
-                            +'<font color="gray">市场活动</font>'
-                            +'<font color="gray">-</font> <b>${activity.name}</b>'
-                            +'<small style="color: gray;"> '+data.remark.createTime+' by '+data.remark.createBy+'</small>'
-                            +'<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">'
-                            +'<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #FF0000;"></span></a>'
-                            +'&nbsp;&nbsp;&nbsp;&nbsp;'
-                            +'<a class="myHref" href="javascript:void(0);" onclick="remove(\''+data.remark.id+'\')"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #FF0000;"></span></a>'
-                            +'</div></div></div>';
-                        $("#remarkDiv").before(html);
-                    }else alert("Remark added failed!");
+                    if (data!=null) remarkList();
+                    else alert("Remark added failed!");
                 }
             })
         })
+
+        //update remark
         $("#updateRemarkBtn").click(function () {
             var id = $("#remarkId").val();
             $.ajax({
@@ -103,12 +141,12 @@
                 type: "post",
                 dataType: "json",
                 success: function (data) {
-                    if (data.success=="1"){
+                    if (data!=null){
                         //update <h5> and <small>
-                        $("#"+id+" h5").html(data.remark.noteContent);
-                        $("#"+id+" small").html(data.remark.editTime+" by "+data.remark.editBy);
+                        $("#"+id+" h5").html(data.noteContent);
+                        $("#"+id+" small").html(data.editTime+" by "+data.editBy);
                         $("#editRemarkModal").modal("hide");
-                        //Plan B: remove all,then remarkList();
+                        //Plan B: remarkList();
                     } else alert("Remark updated failed!");
                 }
             })
@@ -118,10 +156,8 @@
 
 	function remarkList() {
 		$.ajax({
-			url: "activity/remark",
-			data: {
-				"activityId": "${activity.id}"
-			},
+			url: "activity/remarks",
+			data: { "activityId": "${activity.id}" },
 			type: "get",
 			dataType: "json",
 			success: function (data) {
@@ -133,36 +169,61 @@
 							+'<h5>'+obj.noteContent+'</h5>'
                             +'<font color="gray">Activity</font>'
 							+'<font color="gray">-</font> <b>${activity.name}</b>'
-                            +'<small style="color: gray;"> '+(obj.editFlag==0?obj.createTime:obj.editTime)+' by '+(obj.editFlag==0?obj.createBy:obj.editBy)+'</small>'
+                            +'<small style="color: gray;"> '+(obj.editFlag==0 ? obj.createTime : obj.editTime)+' by '+(obj.editFlag==0 ? obj.createBy : obj.editBy)+'</small>'
 							+'<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">'
-							+'<a class="myHref" href="javascript:void(0);" onclick="update(\''+obj.id+'\')"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #FF0000;"></span></a>'
+							+'<a class="myHref" href="javascript:void(0);" onclick="edit(\''+obj.id+'\')"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #FF0000;"></span></a>'
 							+'&nbsp;&nbsp;&nbsp;&nbsp;'
 							+'<a class="myHref" href="javascript:void(0);" onclick="remove(\''+obj.id+'\')"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #FF0000;"></span></a>'
 							+'</div></div></div>';
 				})
-                $("#remarkDiv").before(html);
+                $("#remarkList").html(html);
+                $("#remark").val("");
 			}
 		})
 	}
 
-	function update(id) {
+	//update activity
+	function update() {
+		$.ajax({
+			url:"activity/update",
+			data: {
+				"id":$.trim($("#edit-id").val()),
+				"owner":$.trim($("#edit-owner").val()),
+				"name":$.trim($("#edit-name").val()),
+				"startDate":$.trim($("#edit-startDate").val()),
+				"endDate":$.trim($("#edit-endDate").val()),
+				"cost":$.trim($("#edit-cost").val()),
+				"description":$.trim($("#edit-description").val())
+			},
+			type:"post",
+			dataType:"json",
+			success:function (data) {
+				if (data=="1") {
+					$("#editActivityModal").modal("hide");
+					window.location.href = "activity/detail?id=${activity.id}";
+				} else {
+					alert("Activity update failed!");
+				}
+			}
+		})
+	}
+
+	//edit remark
+	function edit(id) {
 	    $("#remarkId").val(id);
 	    $("#noteContent").val($("#"+id+" h5").html());
         $("#editRemarkModal").modal("show");
     }
-
+    //remove remark
 	function remove(id) {
         $.ajax({
             url: "activity/removeRemark",
-            data: {
-                "id": id,
-            },
+            data: { "id": id },
             type: "post",
             dataType: "json",
             success: function (data) {
-                if (data=="1") {
-                    $("#"+id).remove();
-                }else alert("Remark removed failed!");
+                if (data=="1") $("#"+id).remove();
+                else alert("Remove remark failed!");
             }
         })
     }
@@ -186,7 +247,7 @@
                 <div class="modal-body">
                     <form class="form-horizontal" role="form">
                         <div class="form-group">
-                            <label for="edit-describe" class="col-sm-2 control-label">Content</label>
+                            <label for="noteContent" class="col-sm-2 control-label">Content</label>
                             <div class="col-sm-10" style="width: 81%;">
                                 <textarea class="form-control" rows="3" id="noteContent"></textarea>
                             </div>
@@ -209,49 +270,47 @@
                     <button type="button" class="close" data-dismiss="modal">
                         <span aria-hidden="true">×</span>
                     </button>
-                    <h4 class="modal-title" id="myModalLabel">修改市场活动</h4>
+                    <h4 class="modal-title" id="myModalLabel">Edit Activity</h4>
                 </div>
                 <div class="modal-body">
 
                     <form class="form-horizontal" role="form">
-
+						<input id="edit-id" type="hidden" value="${activity.id}" />
                         <div class="form-group">
-                            <label for="edit-marketActivityOwner" class="col-sm-2 control-label">Owner<span style="font-size: 15px; color: red;">*</span></label>
+                            <label for="edit-owner" class="col-sm-2 control-label">Owner<span style="font-size: 15px; color: red;">*</span></label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <select class="form-control" id="edit-marketActivityOwner">
-                                    <option>zhangsan</option>
-                                    <option>lisi</option>
-                                    <option>wangwu</option>
+                                <select class="form-control" id="edit-owner">
+
                                 </select>
                             </div>
-                            <label for="edit-marketActivityName" class="col-sm-2 control-label">Name<span style="font-size: 15px; color: red;">*</span></label>
+                            <label for="edit-name" class="col-sm-2 control-label">Name<span style="font-size: 15px; color: red;">*</span></label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-marketActivityName" value="${activity.name}">
+                                <input type="text" class="form-control" id="edit-name" value="${activity.name}">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-startTime" class="col-sm-2 control-label">开始日期</label>
+                            <label for="edit-startDate" class="col-sm-2 control-label">Start Date</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-startTime" value="2020-10-10">
+                                <input type="text" class="form-control time" id="edit-startDate" value="${activity.startDate}">
                             </div>
-                            <label for="edit-endTime" class="col-sm-2 control-label">结束日期</label>
+                            <label for="edit-endDate" class="col-sm-2 control-label">End Date</label>
                             <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-endTime" value="2020-10-20">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="edit-cost" class="col-sm-2 control-label">成本</label>
-                            <div class="col-sm-10" style="width: 300px;">
-                                <input type="text" class="form-control" id="edit-cost" value="5,000">
+                                <input type="text" class="form-control time" id="edit-endDate" value="${activity.endDate}">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="edit-describe" class="col-sm-2 control-label">Description</label>
+                            <label for="edit-cost" class="col-sm-2 control-label">Cost</label>
+                            <div class="col-sm-10" style="width: 300px;">
+                                <input type="text" class="form-control" id="edit-cost" value="${activity.cost}">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-description" class="col-sm-2 control-label">Description</label>
                             <div class="col-sm-10" style="width: 81%;">
-                                <textarea class="form-control" rows="3" id="edit-describe">市场活动Marketing，是指品牌主办或参与的展览会议与公关市场活动，包括自行主办的各类研讨会、客户交流会、演示会、新产品发布会、体验会、答谢会、年会和出席参加并布展或演讲的展览会、研讨会、行业交流会、颁奖典礼等</textarea>
+                                <textarea class="form-control" rows="3" id="edit-description">${activity.description}</textarea>
                             </div>
                         </div>
 
@@ -259,30 +318,30 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">更新</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button id="updateBtn" type="button" class="btn btn-primary">Update</button>
                 </div>
             </div>
         </div>
     </div>
 
-	<!-- 返回按钮 -->
+	<!-- back button -->
 	<div style="position: relative; top: 35px; left: 10px;">
 		<a href="javascript:void(0);" onclick="window.history.back();"><span class="glyphicon glyphicon-arrow-left" style="font-size: 20px; color: #DDDDDD"></span></a>
 	</div>
 	
-	<!-- 大标题 -->
+	<!-- topic -->
 	<div style="position: relative; left: 40px; top: -30px;">
 		<div class="page-header">
-			<h3>Activity-${activity.name} <small>2020-10-10 ~ 2020-10-20</small></h3>
+			<h3>Activity-${activity.name} <small>${activity.startDate} ~ ${activity.endDate}</small></h3>
 		</div>
 		<div style="position: relative; height: 50px; width: 250px;  top: -72px; left: 700px;">
-			<button type="button" class="btn btn-default" data-toggle="modal" data-target="#editActivityModal"><span class="glyphicon glyphicon-edit"></span> 编辑</button>
-			<button type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> 删除</button>
+			<button id="editBtn" type="button" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span> Edit</button>
+			<button id="deleteBtn" type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> Delete</button>
 		</div>
 	</div>
 	
-	<!-- 详细信息 -->
+	<!-- detail -->
 	<div style="position: relative; top: -70px;">
 		<div style="position: relative; left: 40px; height: 30px;">
 			<div style="width: 300px; color: gray;">Owner</div>
@@ -327,14 +386,15 @@
 		</div>
 	</div>
 	
-	<!-- 备注 -->
+	<!-- remark -->
 	<div id="remarkBody" style="position: relative; top: 30px; left: 40px;">
 		<div id="remarkAppend" class="page-header">
 			<h4>Remark</h4>
 		</div>
 		
-		<!-- 备注1 -->
-		
+		<!-- remark 1~n -->
+		<div id="remarkList"></div>
+
 		<div id="remarkDiv" style="background-color: #E6E6E6; width: 870px; height: 90px;">
 			<form role="form" style="position: relative;top: 10px; left: 10px;">
 				<textarea id="remark" class="form-control" style="width: 850px; resize : none;" rows="2"  placeholder="Add remark..."></textarea>

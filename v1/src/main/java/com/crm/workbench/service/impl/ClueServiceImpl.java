@@ -1,24 +1,35 @@
 package com.crm.workbench.service.impl;
 
+import com.crm.exceptions.DaoException;
+import com.crm.settings.dao.UserDao;
+import com.crm.utils.Convert;
 import com.crm.utils.DateTimeUtil;
 import com.crm.utils.UUIDUtil;
+import com.crm.vo.Pagination;
 import com.crm.workbench.dao.*;
 import com.crm.workbench.domain.*;
 import com.crm.workbench.service.ClueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ClueServiceImpl implements ClueService {
+
+    @Autowired
+    private UserDao userDao;
+
     @Autowired
     private ClueDao clueDao;
     @Autowired
-    private ClueActivityRelationDao clueActivityRelationDao;
-    @Autowired
     private ClueRemarkDao clueRemarkDao;
+    @Autowired
+    private ClueActivityRelationDao clueActivityRelationDao;
 
     @Autowired
     private CustomerDao customerDao;
@@ -37,9 +48,19 @@ public class ClueServiceImpl implements ClueService {
     @Autowired
     private TranHistoryDao tranHistoryDao;
 
+    /* ========================================= clue ========================================= */
+
     @Override
-    public boolean save(Clue clue) {
-        return clueDao.insert(clue)==1;
+    public Pagination<Clue> pageList(Clue clue) throws DaoException{
+        int total = clueDao.total(clue);
+        List<Clue> list = clueDao.clueList(clue);
+        if (total!=0 && list==null) throw new DaoException("Clues query failed!");
+        return new Pagination<>(total,list);
+    }
+
+    @Override
+    public void save(Clue clue) throws DaoException {
+        if (clueDao.insert(clue)!=1) throw new DaoException("Clue create failed!");
     }
 
     @Override
@@ -48,140 +69,197 @@ public class ClueServiceImpl implements ClueService {
     }
 
     @Override
-    public boolean unbind(String id) {
-        return clueActivityRelationDao.delete(id)==1;
+    public Map<String, Object> edit(String id) {
+        Map<String,Object> map = new HashMap<>();
+        map.put("list",userDao.getUserList());
+        map.put("clue",clueDao.edit(id));
+        return map;
     }
 
     @Override
-    public int bind(String clueId,String[] activityIds) {
-        List<ClueActivityRelation> list = new ArrayList<>();
-        for (String activityId:activityIds) {
-            ClueActivityRelation car = new ClueActivityRelation(UUIDUtil.getUUID(),clueId,activityId);
-            list.add(car);
-        }
-        return clueActivityRelationDao.bind(list);
+    public void update(Clue clue) throws DaoException {
+        if (clueDao.update(clue)!=1) throw new DaoException("Clue update failed!");
     }
 
-    //27.01.2022 22:22
-    public boolean convert(String clueId, String createBy, Tran tran) {
-        String createTime = DateTimeUtil.getSysTime();
+    @Transactional
+    @Override
+    public void delete(String[] ids) throws DaoException {
+        clueRemarkDao.deleteByClue(ids);
+        clueActivityRelationDao.deleteByClue(ids);
+        if (clueDao.delete(ids)!=ids.length) throw new DaoException("Clue delete failed!");
+    }
 
-        int count = 0;
-        Clue clue = clueDao.getClueById(clueId);
-        String company = clue.getCompany();
+    /* ========================================= remark ========================================= */
 
-        // optimize per reflection clue->customer and clue->contacts
-        // 1 --- convert the clue info into customer
-        Customer customer = customerDao.getCustomerByName(company);
-        if (customer==null) {
-            customer = new Customer();
-            customer.setId(UUIDUtil.getUUID());
-            customer.setOwner(clue.getOwner());
-            customer.setName(company);
-            customer.setWebsite(clue.getWebsite());
-            customer.setPhone(clue.getPhone());
-            customer.setCreateBy(createBy);
-            customer.setCreateTime(createTime);
-            customer.setContactSummary(clue.getContactSummary());
-            customer.setNextContactTime(clue.getNextContactTime());
-            customer.setDescription(clue.getDescription());
-            customer.setAddress(clue.getAddress());
-            count += customerDao.addCustomer(customer);
+    @Override
+    public List<ClueRemark> getRemarksByClueId(String clueId) {
+        return clueRemarkDao.select(clueId);
+    }
+
+    @Override
+    public void addRemark(ClueRemark remark) throws DaoException {
+        if (clueRemarkDao.insert(remark)!=1) throw new DaoException("Save remark failed!");
+    }
+
+    @Override
+    public void updateRemark(ClueRemark remark) throws DaoException {
+        if (clueRemarkDao.update(remark)!=1) throw new DaoException("Update remark failed!");
+    }
+
+    @Override
+    public void removeRemark(String id) throws DaoException {
+        if (clueRemarkDao.delete(id)!=1) throw new DaoException("Delete remark failed!");
+    }
+
+    /* ========================================= activity ========================================= */
+
+    @Override
+    public void unbind(String id) throws DaoException {
+        if (clueActivityRelationDao.delete(id)!=1) throw new DaoException("Delete clue and activity relation failed!");
+    }
+
+    @Override
+    public void bind(String clueId,String[] activityIds) throws DaoException {
+        List<ClueActivityRelation> list = new ArrayList<>();
+        for (String activityId:activityIds) {
+            list.add(new ClueActivityRelation(UUIDUtil.getUUID(),clueId,activityId));
         }
+        if (clueActivityRelationDao.bind(list)!=activityIds.length) throw new DaoException("Bind activity failed!");
+    }
 
-        // 2 --- convert the clue info into contacts
-        Contacts contact = new Contacts();
-        contact.setId(UUIDUtil.getUUID());
-        contact.setOwner(clue.getOwner());
-        contact.setSource(clue.getSource());
-        contact.setCustomerId(customer.getId());
-        contact.setFullname(clue.getFullname());
-        contact.setAppellation(clue.getAppellation());
-        contact.setEmail(clue.getEmail());
-        contact.setMphone(clue.getMphone());
-        contact.setJob(clue.getJob());
-        contact.setCreateBy(createBy);
-        contact.setCreateTime(createTime);
-        contact.setDescription(clue.getDescription());
-        contact.setContactSummary(clue.getContactSummary());
-        contact.setNextContactTime(clue.getNextContactTime());
-        contact.setAddress(clue.getAddress());
-        count += contactsDao.addContact(contact);
+    /* ========================== convert: customer + contacts + transaction ========================== */
 
-        // remarkList.size()*2 + 2 --- get all clueRemark by clueId and convert the clueRemark into customerRemark and contactsRemark
-        List<ClueRemark> clueRemarkList = clueRemarkDao.getRemarksByclueId(clueId);
+    //if customer named by company doesn't exist, create one by convert clue info into new customer
+    private Customer clue2Customer(Clue clue,HashMap<String,String> map) throws DaoException {
+        String company = clue.getCompany();
+        Customer customer = customerDao.select(company);
+        if (customer==null) {
+            try {
+                customer = (Customer) Convert.o2o(clue,new Customer());
+                customer.setId(UUIDUtil.getUUID());
+                customer.setName(company);
+                customer.setCreateBy(map.get("createBy"));
+                customer.setCreateTime(map.get("createTime"));
+            } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+            if (customerDao.insert(customer)!=1) throw new DaoException("Create customer failed!");
+        }
+        return customer;
+    }
+
+    //create contact by convert clue info into new contact
+    private Contacts clue2Contact(Clue clue,HashMap<String,String> map) throws DaoException {
+        Contacts contact = new Contacts();//contact can have the same name
+        try {
+            contact = (Contacts) Convert.o2o(clue,contact);
+            contact.setId(UUIDUtil.getUUID());
+            contact.setCustomerId(map.get("customerId"));
+            contact.setCreateBy(map.get("createBy"));
+            contact.setCreateTime(map.get("createTime"));
+        } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        if (contactsDao.insert(contact)!=1) throw new DaoException("Create contact failed!");
+        return contact;
+    }
+
+    //get all clueRemark by clueId and convert the clueRemark into customerRemark and contactsRemark
+    private void clue2Remark(String clueId,HashMap<String,String> map) throws DaoException {
+        List<ClueRemark> clueRemarkList = clueRemarkDao.select(clueId);
         for(ClueRemark clueRemark:clueRemarkList) {
             String noteContent = clueRemark.getNoteContent();
 
             CustomerRemark customerRemark = new CustomerRemark();
             customerRemark.setId(UUIDUtil.getUUID());
             customerRemark.setNoteContent(noteContent);
-            customerRemark.setCreateBy(createBy);
-            customerRemark.setCreateTime(createTime);
-            customerRemark.setEditFlag("0");
-            customerRemark.setCustomerId(customer.getId());
-            count += customerRemarkDao.addCustomer(clueRemark);
+            customerRemark.setCreateBy(map.get("createBy"));
+            customerRemark.setCreateTime(map.get("createTime"));
+            customerRemark.setCustomerId(map.get("customerId"));
+            if (customerRemarkDao.insert(customerRemark)!=1) throw new DaoException("Create customer remark failed!");
 
             ContactsRemark contactsRemark = new ContactsRemark();
             contactsRemark.setId(UUIDUtil.getUUID());
             contactsRemark.setNoteContent(noteContent);
-            contactsRemark.setCreateBy(createBy);
-            contactsRemark.setCreateTime(createTime);
-            contactsRemark.setEditFlag("0");
-            contactsRemark.setContactsId(contact.getId());
-            count += contactsRemarkDao.addContact(contactsRemark);
+            contactsRemark.setCreateBy(map.get("createBy"));
+            contactsRemark.setCreateTime(map.get("createTime"));
+            contactsRemark.setContactsId(map.get("contactsId"));
+            if (contactsRemarkDao.insert(contactsRemark)!=1) throw new DaoException("Create contact remark failed!");
         }
+        //delete clue remark by clueId
+        if (clueRemarkDao.deleteByClue(new String[] {clueId})!=clueRemarkList.size()) throw new DaoException("Delete clue remark failed!");
+    }
 
-        // clueActivityRelationList.size() + remarkList.size()*2 + 2 --- convert clue_activity_relation into contacts_activity_relation
+    //convert clue_activity_relation into contacts_activity_relation
+    private void clueRel2contactRel(String clueId,HashMap<String,String> map) throws DaoException {
         List<ClueActivityRelation> clueActivityRelationList = clueActivityRelationDao.getActiviesByclueId(clueId);
         for (ClueActivityRelation clueActivityRelation:clueActivityRelationList) {
             ContactsActivityRelation contactsActivityRelation = new ContactsActivityRelation();
             contactsActivityRelation.setId(UUIDUtil.getUUID());
-            contactsActivityRelation.setContactsId(contact.getId());
+            contactsActivityRelation.setContactsId(map.get("contactsId"));
             contactsActivityRelation.setActivityId(clueActivityRelation.getActivityId());
-            count += contactsActivityRelationDao.add(contactsActivityRelation);
+            if (contactsActivityRelationDao.insert(contactsActivityRelation)!=1) throw new DaoException("Create relation between contact and activity failed!");
         }
+        if (clueActivityRelationDao.deleteByClue(new String[] {clueId})!=clueActivityRelationList.size()) throw new DaoException("Delete relation between clue and activity failed!");
+    }
 
-        /** create the transaction
-         * <form id="tranForm" .../> money,name,expectedDate,stage,source(activityName),activityId
-         * t_tran: id,owner,customerId,type,source,contactsId,createBy,createTime,description,contactSummary,nextContactTime
-         */
-        // 2 + clueActivityRelationList.size() + remarkList.size()*2 + 2 --- create transaction and transaction history
-        if (tran!=null) {
-            tran.setId(UUIDUtil.getUUID());
-            tran.setOwner(clue.getOwner());
-            tran.setCustomerId(customer.getId());
-            tran.setContactsId(contact.getId());
-            tran.setCreateBy(createBy);
-            tran.setCreateTime(createTime);
-            tran.setDescription(clue.getDescription());
-            tran.setContactSummary(clue.getContactSummary());
-            tran.setNextContactTime(clue.getNextContactTime());
-            count += tranDao.add(tran);
+    //create transaction and transaction history
+    private void tran(Clue clue,Tran tran,HashMap<String,String> map) throws DaoException {
+        if (tran.getMoney()!=null) {
+            try {
+                tran = (Tran) Convert.o2o(clue,tran);
+                tran.setId(UUIDUtil.getUUID());
+                tran.setCustomerId(map.get("customerId"));
+                tran.setContactsId(map.get("contactsId"));
+                tran.setCreateBy(map.get("createBy"));
+                tran.setCreateTime(map.get("createTime"));
+            } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+            if (tranDao.insert(tran)!=1) throw new DaoException("Create transaction failed!");
 
             TranHistory tranHistory = new TranHistory();
-            tranHistory.setId(UUIDUtil.getUUID());
-            tranHistory.setStage(tran.getStage());
-            tranHistory.setMoney(tran.getMoney());
-            tranHistory.setExpectedDate(tran.getExpectedDate());
-            tranHistory.setCreateBy(createBy);
-            tranHistory.setCreateTime(createTime);
-            tranHistory.setTranId(tran.getId());
-            count += tranHistoryDao.add(tranHistory);
+            try {
+                tranHistory = (TranHistory) Convert.o2o(tran,tranHistory);
+                tranHistory.setId(UUIDUtil.getUUID());
+                tranHistory.setCreateBy(map.get("createBy"));
+                tranHistory.setCreateTime(map.get("createTime"));
+                tranHistory.setTranId(tran.getId());
+            } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+            if (tranHistoryDao.insert(tranHistory)!=1) throw new DaoException("Create transaction history failed!");
         }
+    }
 
-        // clueRemarkList.size() + 2 + clueActivityRelationList.size() + remarkList.size()*2 + 2 --- delete clue remark
-        for (ClueRemark clueRemark:clueRemarkList) {
-            count += clueRemarkDao.delete(clueRemark);
-        }
+    @Transactional
+    @Override
+    public void convert(String clueId, Tran tran) throws DaoException {
 
-        //clueActivityRelationList.size() + clueRemarkList.size() + 2 + clueActivityRelationList.size() + remarkList.size()*2 + 2 --- delete clueActivityRelation
-        for (ClueActivityRelation clueActivityRelation:clueActivityRelationList) {
-            count += clueActivityRelationDao.delete(clueActivityRelation.getId());
-        }
+        Clue clue = clueDao.getClueById(clueId);
 
-        //5 + clueActivityRelationList.size() + clueRemarkList.size() + clueActivityRelationList.size() + remarkList.size()*2 --- delete clue
-        count += clueDao.delete(clueId);
-        return count==(5+clueActivityRelationList.size()+clueRemarkList.size()+clueActivityRelationList.size()+clueRemarkList.size()*2);
-    };
+        HashMap<String,String> map = new HashMap<>();
+        map.put("createBy",tran.getCreateBy());
+        map.put("createTime",DateTimeUtil.getSysTime());
+
+        Customer customer = clue2Customer(clue,map);
+        map.put("customerId",customer.getId());
+
+        Contacts contact = clue2Contact(clue,map);
+        map.put("contactsId",contact.getId());
+
+        clue2Remark(clueId,map);
+
+        clueRel2contactRel(clueId,map);
+
+        tran(clue,tran,map);
+
+        //if (clueDao.delete(new String[] {clueId})!=1) throw new DaoException("Delete clue failed!");
+    }
+
+
+
+
+
+
 }

@@ -3,30 +3,34 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.crm.workbench.dao.ActivityRemarkDao">
-    <select id="getRemarksCount" resultType="int">
+    <select id="count" resultType="int">
         SELECT COUNT(*) FROM t_activity_remark WHERE activityId IN
         <foreach collection="array" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
     </select>
-    <delete id="deleteRemarks">
+
+    <delete id="delete">
         DELETE FROM t_activity_remark WHERE activityId IN
         <foreach collection="array" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
     </delete>
-    <select id="selectRemarks" resultType="activityRemark">
+
+    <select id="select" resultType="activityRemark">
         SELECT * FROM t_activity_remark WHERE activityId = #{activityId} ORDER BY createTime DESC
     </select>
-    <delete id="removeRemark">
+
+    <insert id="insert">
+        INSERT INTO t_activity_remark(id,noteContent,createTime,createBy,editFlag,activityId)
+        VALUES(#{id},#{noteContent},#{createTime},#{createBy},'0',#{activityId})
+    </insert>
+
+    <delete id="remove">
         DELETE FROM t_activity_remark WHERE id = #{id}
     </delete>
-    <insert id="insertRemark">
-        INSERT INTO t_activity_remark(id,noteContent,createTime,createBy,editFlag,activityId)
-        VALUES(#{id},#{noteContent},#{createTime},#{createBy},#{editFlag},#{activityId})
-    </insert>
-    <update id="updateRemark">
-        UPDATE t_activity_remark SET noteContent=#{noteContent},editBy=#{editBy},editTime=#{editTime},editFlag='1'
-        WHERE id = #{id}
+
+    <update id="update">
+        UPDATE t_activity_remark SET noteContent=#{noteContent},editBy=#{editBy},editTime=#{editTime},editFlag='1' WHERE id = #{id}
     </update>
 </mapper>

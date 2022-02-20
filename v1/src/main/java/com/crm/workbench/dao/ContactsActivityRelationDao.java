@@ -4,5 +4,5 @@ import com.crm.workbench.domain.ContactsActivityRelation;
 
 public interface ContactsActivityRelationDao {
 
-    int add(ContactsActivityRelation contactsActivityRelation);
+    int insert(ContactsActivityRelation contactsActivityRelation);
 }

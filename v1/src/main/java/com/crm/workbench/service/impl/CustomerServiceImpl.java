@@ -9,11 +9,12 @@ import java.util.List;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
+
     @Autowired
     private CustomerDao customerDao;
 
     @Override
-    public List<String> getCustomerName(String name) {
-        return customerDao.getCustomerName(name);
+    public List<String> autoComplete(String name) {
+        return customerDao.selectName(name);
     }
 }

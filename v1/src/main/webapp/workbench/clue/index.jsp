@@ -10,44 +10,211 @@
 
 	<link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
 	<link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css" rel="stylesheet" />
-
 	<script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+	<link rel="stylesheet" type="text/css" href="jquery/bs_pagination/jquery.bs_pagination.min.css">
+	<script type="text/javascript" src="jquery/bs_pagination/jquery.bs_pagination.min.js"></script>
+	<script type="text/javascript" src="jquery/bs_pagination/en.js"></script>
+	<script type="text/javascript">
 
-<script type="text/javascript">
+		$(function(){
 
-	$(function(){
+			$(".time").datetimepicker({
+				minView: "month",
+				language:  'zh-CN',
+				format: 'yyyy-mm-dd',
+				autoclose: true,
+				todayBtn: true,
+				pickerPosition: "top-left"
+			});
 
-		$(".time").datetimepicker({
-			minView: "month",
-			language:  'zh-CN',
-			format: 'yyyy-mm-dd',
-			autoclose: true,
-			todayBtn: true,
-			pickerPosition: "top-left"
-		});
+			pageList(1,3);
 
-		$("#addBtn").click(function () {
-			$.ajax({
-				url:"clue/add",
-				type:"get",
-				dataType:"json",
-				success:function (data) {
-					var html = "<option></option>";//空下拉框
-					$.each(data,function (i,obj) {
-						html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+			//checkbox
+			$("#checkAll").click(function () {
+				$("input[name=check]").prop("checked",this.checked);
+			})
+			$("#tbody-clue").on("click",$("input[name=check]"),function () {
+				$("#checkAll").prop("checked",$("input[name=check]").length==$("input[name=check]:checked").length);
+			})
+
+			$("#queryBtn").click(function () {
+				$("#hid-fullname").val($.trim($("#fullname").val()));
+				$("#hid-company").val($.trim($("#company").val()));
+				$("#hid-phone").val($.trim($("#phone").val()));
+				$("#hid-source").val($.trim($("#source").val()));
+				$("#hid-owner").val($.trim($("#owner").val()));
+				$("#hid-mphone").val($.trim($("#mphone").val()));
+				$("#hid-state").val($.trim($("#state").val()));
+				pageList(1,3);
+			});
+
+			//create
+			$("#addBtn").click(function () {
+				$.ajax({
+					url:"user/owner",
+					type:"get",
+					dataType:"json",
+					success:function (data) {
+						var html = "<option></option>";
+						$.each(data,function (i,obj) {
+							html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+						})
+						$("#create-owner").html(html);
+						$("#create-owner").val("${user.id}");
+						$("#createClueModal").modal("show");
+					}
+				})
+
+			})
+			$("#saveBtn").click(function () {
+				create();
+			})
+			$(window).keydown(function (event) {
+				if (event.keyCode==13) create();
+			})
+
+			//update
+			$("#editBtn").click(function () {
+				var $checked = $("input[name=check]:checked");
+				if ($checked.length==0) {
+					alert("None clue is selected!")
+				}else if ($checked.length>1){
+					alert("Only can update one clue a time!")
+				}else {
+					var id = "id="+$checked.val();
+					$.ajax({
+						url:"clue/edit",
+						data: id,
+						type:"get",
+						dataType:"json",
+						success:function (data) {
+							var html = "<option></option>";
+							$.each(data.list,function (i,obj) {
+								html += "<option value='"+obj.id+"'>"+obj.name+"</option>";
+							})
+							$("#edit-id").val(data.clue.id);
+							$("#edit-owner").html(html);
+							$("#edit-owner").val(data.clue.owner);
+							$("#edit-company").val(data.clue.company);
+							$("#edit-appellation").val(data.clue.appellation);
+							$("#edit-fullname").val(data.clue.fullname);
+							$("#edit-job").val(data.clue.job);
+							$("#edit-email").val(data.clue.email);
+							$("#edit-phone").val(data.clue.phone);
+							$("#edit-website").val(data.clue.website);
+							$("#edit-mphone").val(data.clue.mphone);
+							$("#edit-state").val(data.clue.state);
+							$("#edit-source").val(data.clue.source);
+							$("#edit-description").val(data.clue.description);
+							$("#edit-contactSummary").val(data.clue.contactSummary);
+							$("#edit-nextContactTime").val(data.clue.nextContactTime);
+							$("#edit-address").val(data.clue.address);
+							$("#editClueModal").modal("show");
+						}
 					})
-					$("#create-owner").html(html);
-					$("#create-owner").val("${user.id}");
-					$("#createClueModal").modal("show");
+				}
+			})
+			$("#updateBtn").click(function () {
+				update();
+			})
+			$(window).keydown(function (event) {
+				if (event.keyCode==13) update();
+			})
+
+			//delete
+			$("#deleteBtn").click(function () {
+				var checked = $("input[name=check]:checked");
+				if (checked.length==0) alert("None clues are selected!")
+				else {
+					if (confirm("Are you sure to delete selected clues?")) {
+						var params = "";
+						for (var i=0;i<checked.length;i++) {
+							params += "id="+checked[i].value;
+							if (i<checked.length-1) params += "&";
+						}
+						$.ajax({
+							url:"clue/delete",
+							data: params,
+							type:"post",
+							dataType:"json",
+							success:function (data) {
+								if (data=="1") {
+									pageList(1,$("#cluePage").bs_pagination('getOption', 'rowsPerPage'));
+								}else alert("Clue delete failed!");
+							}
+						})
+					}
 				}
 			})
 
-		})
 
-		$("#saveBtn").click(function () {
+		});
+
+		function pageList(pageNo,pageSize) {
+			$("#checkAll").prop("checked",false);
+			//get search condition form hidden field
+			$("#fullname").val($.trim($("#hid-fullname").val()));
+			$("#company").val($.trim($("#hid-company").val()));
+			$("#phone").val($.trim($("#hid-phone").val()));
+			$("#source").val($.trim($("#hid-source").val()));
+			$("#owner").val($.trim($("#hid-owner").val()));
+			$("#mphone").val($.trim($("#hid-mphone").val()));
+			$("#state").val($.trim($("#hid-state").val()));
+			$.ajax({
+				url:"clue/clues",
+				data: {
+					"pageNo":pageNo,
+					"pageSize":pageSize,
+					"fullname":$.trim($("#fullname").val()),
+					"company":$.trim($("#company").val()),
+					"phone":$.trim($("#phone").val()),
+					"source":$.trim($("#source").val()),
+					"owner":$.trim($("#owner").val()),
+					"mphone":$.trim($("#mphone").val()),
+					"state":$.trim($("#state").val()),
+				},
+				type:"get",
+				dataType:"json",
+				success:function (data) {
+					if (data!=null) {
+						var html = "";
+						$.each(data.dataList,function (i,obj) {
+							html += "<tr><td><input name='check' type='checkbox' value='"+obj.id+"'/></td>"
+									+"<td><a style='text-decoration: none; cursor: pointer;' onclick=window.location.href=\'clue/detail?id="+obj.id+"\';>"+obj.appellation+obj.fullname+"</a></td>"
+									+"<td>"+obj.company+"</td>"
+									+"<td>"+obj.phone+"</td>"
+									+"<td>"+obj.mphone+"</td>"
+									+"<td>"+obj.source+"</td>"
+									+"<td>"+obj.owner+"</td>"
+									+"<td>"+obj.state+"</td></tr>";
+						})
+						$("#tbody-clue").html(html);
+						var totalPages = data.total%pageSize==0 ? data.total/pageSize : Math.ceil(data.total/pageSize);
+						//bootstrap pagination
+						$("#cluePage").bs_pagination({
+							currentPage: pageNo,
+							rowsPerPage: pageSize,
+							maxRowsPerPage: 20,
+							totalPages: totalPages,
+							totalRows: data.total,
+							visiblePageLinks: 5,
+							showGoToPage: true,
+							showRowsPerPage: true,
+							showRowsInfo: true,
+							showRowsDefaultInfo: true,
+							onChangePage : function(event, data){
+								pageList(data.currentPage , data.rowsPerPage);
+							}
+						});
+					} else alert("Clues query failed!");
+				}
+			})
+		}
+
+		function create() {
 			$.ajax({
 				url:"clue/save",
 				data:{
@@ -71,23 +238,61 @@
 				dataType:"json",
 				success:function (data) {
 					if (data=="1") {
-						//refresh activity list
-						//pageList(1,$("#activityPage").bs_pagination('getOption', 'rowsPerPage'));
-						//reset form
-						$("#create-form")[0].reset();
+						pageList(1,$("#cluePage").bs_pagination('getOption', 'rowsPerPage'));
+						$("#create-form")[0].reset();//reset form
 						$("#createClueModal").modal("hide");
 					}else alert("Clue added failed!")
 				}
+			});
+		}
+
+		function update() {
+			$.ajax({
+				url:"clue/update",
+				data: {
+					"id":$("#edit-id").val(),
+					"owner":$.trim($("#edit-owner").val()),
+					"company":$.trim($("#edit-company").val()),
+					"appellation":$.trim($("#edit-appellation").val()),
+					"fullname":$.trim($("#edit-fullname").val()),
+					"job":$.trim($("#edit-job").val()),
+					"email":$.trim($("#edit-email").val()),
+					"phone":$.trim($("#edit-phone").val()),
+					"website":$.trim($("#edit-website").val()),
+					"mphone":$.trim($("#edit-mphone").val()),
+					"state":$.trim($("#edit-state").val()),
+					"source":$.trim($("#edit-source").val()),
+					"description":$.trim($("#edit-description").val()),
+					"contactSummary":$.trim($("#edit-contactSummary").val()),
+					"nextContactTime":$.trim($("#edit-nextContactTime").val()),
+					"address":$.trim($("#edit-address").val())
+				},
+				type:"post",
+				dataType:"json",
+				success:function (data) {
+					if (data=="1") {
+						alert("Clue update succeed!");
+						pageList($("#cluePage").bs_pagination('getOption', 'currentPage')
+								,$("#cluePage").bs_pagination('getOption', 'rowsPerPage'));
+						$("#editClueModal").modal("hide");
+					} else alert("Clue update failed!");
+				}
 			})
-		})
-		
-	});
-	
-</script>
+		}
+
+	</script>
 </head>
 <body>
+	<!-- hidden field for search condition -->
+	<input type="hidden" id="hid-fullname" />
+	<input type="hidden" id="hid-company" />
+	<input type="hidden" id="hid-phone" />
+	<input type="hidden" id="hid-source" />
+	<input type="hidden" id="hid-owner" />
+	<input type="hidden" id="hid-mphone" />
+	<input type="hidden" id="hid-state" />
 
-	<!-- 创建线索的模态窗口 -->
+	<!-- create clue modal -->
 	<div class="modal fade" id="createClueModal" role="dialog">
 		<div class="modal-dialog" role="document" style="width: 90%;">
 			<div class="modal-content">
@@ -171,7 +376,7 @@
 							<label for="create-source" class="col-sm-2 control-label">Source</label>
 							<div class="col-sm-10" style="width: 300px;">
 								<select class="form-control" id="create-source">
-								  <option></option>
+								  	<option></option>
 									<c:forEach items="${source}" var="dicValue">
 										<option value="${dicValue.value}">${dicValue.text}</option>
 									</c:forEach>
@@ -199,7 +404,7 @@
 							<div class="form-group">
 								<label for="create-nextContactTime" class="col-sm-2 control-label">Next contact time</label>
 								<div class="col-sm-10" style="width: 300px;">
-									<input type="text" class="form-control time" id="create-nextContactTime">
+									<input type="text" class="form-control time" id="create-nextContactTime" readonly>
 								</div>
 							</div>
 						</div>
@@ -225,7 +430,7 @@
 		</div>
 	</div>
 	
-	<!-- 修改线索的模态窗口 -->
+	<!-- update clue modal -->
 	<div class="modal fade" id="editClueModal" role="dialog">
 		<div class="modal-dialog" role="document" style="width: 90%;">
 			<div class="modal-content">
@@ -233,113 +438,94 @@
 					<button type="button" class="close" data-dismiss="modal">
 						<span aria-hidden="true">×</span>
 					</button>
-					<h4 class="modal-title">修改线索</h4>
+					<h4 class="modal-title">Edit clue</h4>
 				</div>
 				<div class="modal-body">
 					<form class="form-horizontal" role="form">
-					
+						<input id="edit-id" type="hidden" />
 						<div class="form-group">
-							<label for="edit-clueOwner" class="col-sm-2 control-label">所有者<span style="font-size: 15px; color: red;">*</span></label>
+							<label for="edit-owner" class="col-sm-2 control-label">Owner<span style="font-size: 15px; color: red;">*</span></label>
 							<div class="col-sm-10" style="width: 300px;">
-								<select class="form-control" id="edit-clueOwner">
-								  <option>zhangsan</option>
-								  <option>lisi</option>
-								  <option>wangwu</option>
+								<select class="form-control" id="edit-owner">
+
 								</select>
 							</div>
-							<label for="edit-company" class="col-sm-2 control-label">公司<span style="font-size: 15px; color: red;">*</span></label>
+							<label for="edit-company" class="col-sm-2 control-label">Company<span style="font-size: 15px; color: red;">*</span></label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-company" value="动力节点">
+								<input type="text" class="form-control" id="edit-company" />
 							</div>
 						</div>
 						
 						<div class="form-group">
-							<label for="edit-call" class="col-sm-2 control-label">称呼</label>
+							<label for="edit-appellation" class="col-sm-2 control-label">Appellation</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<select class="form-control" id="edit-call">
-								  <option></option>
-								  <option selected>先生</option>
-								  <option>夫人</option>
-								  <option>女士</option>
-								  <option>博士</option>
-								  <option>教授</option>
+								<select class="form-control" id="edit-appellation">
+									<option></option>
+									<c:forEach items="${appellation}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
 								</select>
 							</div>
-							<label for="edit-surname" class="col-sm-2 control-label">姓名<span style="font-size: 15px; color: red;">*</span></label>
+							<label for="edit-fullname" class="col-sm-2 control-label">Fullname<span style="font-size: 15px; color: red;">*</span></label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-surname" value="李四">
+								<input type="text" class="form-control" id="edit-fullname" />
 							</div>
 						</div>
 						
 						<div class="form-group">
-							<label for="edit-job" class="col-sm-2 control-label">职位</label>
+							<label for="edit-job" class="col-sm-2 control-label">Job</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-job" value="CTO">
+								<input type="text" class="form-control" id="edit-job" />
 							</div>
-							<label for="edit-email" class="col-sm-2 control-label">邮箱</label>
+							<label for="edit-email" class="col-sm-2 control-label">E-mail</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-email" value="lisi@bjpowernode.com">
-							</div>
-						</div>
-						
-						<div class="form-group">
-							<label for="edit-phone" class="col-sm-2 control-label">公司座机</label>
-							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-phone" value="010-84846003">
-							</div>
-							<label for="edit-website" class="col-sm-2 control-label">公司网站</label>
-							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-website" value="http://www.bjpowernode.com">
+								<input type="text" class="form-control" id="edit-email" />
 							</div>
 						</div>
 						
 						<div class="form-group">
-							<label for="edit-mphone" class="col-sm-2 control-label">手机</label>
+							<label for="edit-phone" class="col-sm-2 control-label">Phone</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<input type="text" class="form-control" id="edit-mphone" value="12345678901">
+								<input type="text" class="form-control" id="edit-phone" />
 							</div>
-							<label for="edit-status" class="col-sm-2 control-label">线索状态</label>
+							<label for="edit-website" class="col-sm-2 control-label">Website</label>
 							<div class="col-sm-10" style="width: 300px;">
-								<select class="form-control" id="edit-status">
-								  <option></option>
-								  <option>试图联系</option>
-								  <option>将来联系</option>
-								  <option selected>已联系</option>
-								  <option>虚假线索</option>
-								  <option>丢失线索</option>
-								  <option>未联系</option>
-								  <option>需要条件</option>
+								<input type="text" class="form-control" id="edit-website" />
+							</div>
+						</div>
+						
+						<div class="form-group">
+							<label for="edit-mphone" class="col-sm-2 control-label">Mobil phone</label>
+							<div class="col-sm-10" style="width: 300px;">
+								<input type="text" class="form-control" id="edit-mphone" />
+							</div>
+							<label for="edit-state" class="col-sm-2 control-label">Clue State</label>
+							<div class="col-sm-10" style="width: 300px;">
+								<select class="form-control" id="edit-state">
+									<option></option>
+									<c:forEach items="${clueState}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
 								</select>
 							</div>
 						</div>
 						
 						<div class="form-group">
-							<label for="edit-source" class="col-sm-2 control-label">线索来源</label>
+							<label for="edit-source" class="col-sm-2 control-label">Source</label>
 							<div class="col-sm-10" style="width: 300px;">
 								<select class="form-control" id="edit-source">
-								  <option></option>
-								  <option selected>广告</option>
-								  <option>推销电话</option>
-								  <option>员工介绍</option>
-								  <option>外部介绍</option>
-								  <option>在线商场</option>
-								  <option>合作伙伴</option>
-								  <option>公开媒介</option>
-								  <option>销售邮件</option>
-								  <option>合作伙伴研讨会</option>
-								  <option>内部研讨会</option>
-								  <option>交易会</option>
-								  <option>web下载</option>
-								  <option>web调研</option>
-								  <option>聊天</option>
+									<option></option>
+									<c:forEach items="${source}" var="dicValue">
+										<option value="${dicValue.value}">${dicValue.text}</option>
+									</c:forEach>
 								</select>
 							</div>
 						</div>
 						
 						<div class="form-group">
-							<label for="edit-describe" class="col-sm-2 control-label">描述</label>
+							<label for="edit-description" class="col-sm-2 control-label">Description</label>
 							<div class="col-sm-10" style="width: 81%;">
-								<textarea class="form-control" rows="3" id="edit-describe">这是一条线索的描述信息</textarea>
+								<textarea class="form-control" rows="3" id="edit-description"></textarea>
 							</div>
 						</div>
 						
@@ -347,15 +533,15 @@
 						
 						<div style="position: relative;top: 15px;">
 							<div class="form-group">
-								<label for="edit-contactSummary" class="col-sm-2 control-label">联系纪要</label>
+								<label for="edit-contactSummary" class="col-sm-2 control-label">Contact Summary</label>
 								<div class="col-sm-10" style="width: 81%;">
-									<textarea class="form-control" rows="3" id="edit-contactSummary">这个线索即将被转换</textarea>
+									<textarea class="form-control" rows="3" id="edit-contactSummary"></textarea>
 								</div>
 							</div>
 							<div class="form-group">
-								<label for="edit-nextContactTime" class="col-sm-2 control-label">下次联系时间</label>
+								<label for="edit-nextContactTime" class="col-sm-2 control-label">Next Contact Time</label>
 								<div class="col-sm-10" style="width: 300px;">
-									<input type="text" class="form-control" id="edit-nextContactTime" value="2017-05-01">
+									<input type="text" class="form-control time" id="edit-nextContactTime" readonly/>
 								</div>
 							</div>
 						</div>
@@ -364,9 +550,9 @@
 
                         <div style="position: relative;top: 20px;">
                             <div class="form-group">
-                                <label for="edit-address" class="col-sm-2 control-label">详细地址</label>
+                                <label for="edit-address" class="col-sm-2 control-label">Address</label>
                                 <div class="col-sm-10" style="width: 81%;">
-                                    <textarea class="form-control" rows="1" id="edit-address">北京大兴区大族企业湾</textarea>
+                                    <textarea class="form-control" rows="1" id="edit-address"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -374,20 +560,17 @@
 					
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-					<button type="button" class="btn btn-primary" data-dismiss="modal">更新</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+					<button id="updateBtn" type="button" class="btn btn-primary" data-dismiss="modal">Update</button>
 				</div>
 			</div>
 		</div>
 	</div>
-	
-	
-	
-	
+
 	<div>
 		<div style="position: relative; left: 10px; top: -10px;">
 			<div class="page-header">
-				<h3>线索列表</h3>
+				<h3>Clues (Potential Customer)</h3>
 			</div>
 		</div>
 	</div>
@@ -395,50 +578,40 @@
 	<div style="position: relative; top: -20px; left: 0px; width: 100%; height: 100%;">
 	
 		<div style="width: 100%; position: absolute;top: 5px; left: 10px;">
-		
+
+			<!-- search condition -->
 			<div class="btn-toolbar" role="toolbar" style="height: 80px;">
 				<form class="form-inline" role="form" style="position: relative;top: 8%; left: 5px;">
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">名称</div>
-				      <input class="form-control" type="text">
+				      <div class="input-group-addon">Fullname</div>
+				      <input id="fullname" class="form-control" type="text">
 				    </div>
 				  </div>
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">公司</div>
-				      <input class="form-control" type="text">
+				      <div class="input-group-addon">Company</div>
+				      <input id="company" class="form-control" type="text">
 				    </div>
 				  </div>
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">公司座机</div>
-				      <input class="form-control" type="text">
+				      <div class="input-group-addon">Phone</div>
+				      <input id="phone" class="form-control" type="text">
 				    </div>
 				  </div>
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">线索来源</div>
-					  <select class="form-control">
-					  	  <option></option>
-					  	  <option>广告</option>
-						  <option>推销电话</option>
-						  <option>员工介绍</option>
-						  <option>外部介绍</option>
-						  <option>在线商场</option>
-						  <option>合作伙伴</option>
-						  <option>公开媒介</option>
-						  <option>销售邮件</option>
-						  <option>合作伙伴研讨会</option>
-						  <option>内部研讨会</option>
-						  <option>交易会</option>
-						  <option>web下载</option>
-						  <option>web调研</option>
-						  <option>聊天</option>
+				      <div class="input-group-addon">Source</div>
+					  <select id="source" class="form-control">
+						  <option></option>
+						  <c:forEach items="${source}" var="dicValue">
+							  <option value="${dicValue.value}">${dicValue.text}</option>
+						  </c:forEach>
 					  </select>
 				    </div>
 				  </div>
@@ -447,8 +620,8 @@
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">所有者</div>
-				      <input class="form-control" type="text">
+				      <div class="input-group-addon">Owner</div>
+				      <input id="owner" class="form-control" type="text">
 				    </div>
 				  </div>
 				  
@@ -456,36 +629,32 @@
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">手机</div>
-				      <input class="form-control" type="text">
+				      <div class="input-group-addon">Mobil Phone</div>
+				      <input id="mphone" class="form-control" type="text">
 				    </div>
 				  </div>
 				  
 				  <div class="form-group">
 				    <div class="input-group">
-				      <div class="input-group-addon">线索状态</div>
-					  <select class="form-control">
-					  	<option></option>
-					  	<option>试图联系</option>
-					  	<option>将来联系</option>
-					  	<option>已联系</option>
-					  	<option>虚假线索</option>
-					  	<option>丢失线索</option>
-					  	<option>未联系</option>
-					  	<option>需要条件</option>
+				      <div class="input-group-addon">State</div>
+					  <select id="state" class="form-control">
+						  <option></option>
+						  <c:forEach items="${clueState}" var="dicValue">
+							  <option value="${dicValue.value}">${dicValue.text}</option>
+						  </c:forEach>
 					  </select>
 				    </div>
 				  </div>
 
-				  <button type="submit" class="btn btn-default">查询</button>
+				  <button id="queryBtn" type="button" class="btn btn-default">Query</button>
 				  
 				</form>
 			</div>
 			<div class="btn-toolbar" role="toolbar" style="background-color: #F7F7F7; height: 50px; position: relative;top: 40px;">
 				<div class="btn-group" style="position: relative; top: 18%;">
 				  <button id="addBtn" type="button" class="btn btn-primary"><span class="glyphicon glyphicon-plus"></span> Create</button>
-				  <button type="button" class="btn btn-default" data-toggle="modal" data-target="#editClueModal"><span class="glyphicon glyphicon-pencil"></span> Update</button>
-				  <button type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> Delete</button>
+				  <button id="editBtn" type="button" class="btn btn-default"><span class="glyphicon glyphicon-pencil"></span> Update</button>
+				  <button id="deleteBtn" type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> Delete</button>
 				</div>
 				
 				
@@ -494,78 +663,27 @@
 				<table class="table table-hover">
 					<thead>
 						<tr style="color: #B3B3B3;">
-							<td><input type="checkbox" /></td>
-							<td>名称</td>
-							<td>公司</td>
-							<td>公司座机</td>
-							<td>手机</td>
-							<td>线索来源</td>
-							<td>所有者</td>
-							<td>线索状态</td>
+							<td><input id="checkAll" type="checkbox" /></td>
+							<td>Fullname</td>
+							<td>Company</td>
+							<td>Tel</td>
+							<td>Mobil</td>
+							<td>Source</td>
+							<td>Owner</td>
+							<td>State</td>
 						</tr>
 					</thead>
-					<tbody>
-						<tr>
-							<td><input type="checkbox" /></td>
-							<td><a style="text-decoration: none; cursor: pointer;" onclick="window.location.href='clue/detail?id=fa2806b012004e46a40602a76701f164';">马云先生</a></td>
-							<td>动力节点</td>
-							<td>010-84846003</td>
-							<td>12345678901</td>
-							<td>广告</td>
-							<td>zhangsan</td>
-							<td>已联系</td>
-						</tr>
-                        <tr class="active">
-                            <td><input type="checkbox" /></td>
-                            <td><a style="text-decoration: none; cursor: pointer;" onclick="window.location.href='workbench/clue/detail.jsp';">李四先生</a></td>
-                            <td>动力节点</td>
-                            <td>010-84846003</td>
-                            <td>12345678901</td>
-                            <td>广告</td>
-                            <td>zhangsan</td>
-                            <td>已联系</td>
-                        </tr>
+					<tbody id="tbody-clue">
+
 					</tbody>
 				</table>
 			</div>
-			
 			<div style="height: 50px; position: relative;top: 60px;">
-				<div>
-					<button type="button" class="btn btn-default" style="cursor: default;">共<b>50</b>条记录</button>
-				</div>
-				<div class="btn-group" style="position: relative;top: -34px; left: 110px;">
-					<button type="button" class="btn btn-default" style="cursor: default;">显示</button>
-					<div class="btn-group">
-						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-							10
-							<span class="caret"></span>
-						</button>
-						<ul class="dropdown-menu" role="menu">
-							<li><a href="#">20</a></li>
-							<li><a href="#">30</a></li>
-						</ul>
-					</div>
-					<button type="button" class="btn btn-default" style="cursor: default;">条/页</button>
-				</div>
-				<div style="position: relative;top: -88px; left: 285px;">
-					<nav>
-						<ul class="pagination">
-							<li class="disabled"><a href="#">首页</a></li>
-							<li class="disabled"><a href="#">上一页</a></li>
-							<li class="active"><a href="#">1</a></li>
-							<li><a href="#">2</a></li>
-							<li><a href="#">3</a></li>
-							<li><a href="#">4</a></li>
-							<li><a href="#">5</a></li>
-							<li><a href="#">下一页</a></li>
-							<li class="disabled"><a href="#">末页</a></li>
-						</ul>
-					</nav>
+				<div id="cluePage">
+					<!-- bootstrap pagination -->
 				</div>
 			</div>
-			
 		</div>
-		
 	</div>
 </body>
 </html>

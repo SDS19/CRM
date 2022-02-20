@@ -6,7 +6,13 @@ import java.util.List;
 
 public interface ClueRemarkDao {
 
-    List<ClueRemark> getRemarksByclueId(String clueId);
+    List<ClueRemark> select(String clueId);
 
-    int delete(ClueRemark clueRemark);
+    int insert(ClueRemark remark);
+
+    int update(ClueRemark clueRemark);
+
+    int delete(String Id);
+
+    int deleteByClue(String[] clueIds);
 }

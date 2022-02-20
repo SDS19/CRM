@@ -7,15 +7,12 @@
 <head>
 	<base href="<%=base%>">
 	<meta charset="UTF-8">
-
 	<link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
 	<script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
-
 	<link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css" rel="stylesheet" />
 	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
 	<script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
-
 <script type="text/javascript">
 	$(function(){
 
@@ -44,23 +41,18 @@
 		$("#search-activity").keydown(function (event) {
 			if (event.keyCode==13) {
 				$.ajax({
-					url: "clue/search_activity_modal",
-					data: {
-						"name": $.trim($("#search-activity").val()),
-					},
+					url: "clue/transaction",
+					data: { "name": $.trim($("#search-activity").val())	},
 					type: "get",
 					dataType: "json",
 					success: function (data) {
 						var html = "";
 						$.each(data,function (i,obj) {
-							html += "<tr>"
-									+"<td><input name='id' value='"+obj.id+"' type='radio'/></td>"
+							html += "<tr><td><input name='id' value='"+obj.id+"' type='radio'/></td>"
 									+"<td id='"+obj.id+"'>"+obj.name+"</td>"
 									+"<td>"+obj.startDate+"</td>"
 									+"<td>"+obj.endDate+"</td>"
-									+"<td>"+obj.owner+"</td>"
-									+"</tr>";
-
+									+"<td>"+obj.owner+"</td></tr>";
 						})
 						$("#searchActivityList").html(html);
 					}
@@ -73,23 +65,17 @@
 		$("#bindActivityBtn").click(function () {
 			var activityId = $("input[name=id]:checked").val();
 			var activityName = $("#"+activityId).html();
-
-			//set values to the "Activity Source" input element
 			$("#activityId").val(activityId);
 			$("#activityName").val(activityName);
-
-			//close modal
 			$("#searchActivityModal").modal("hide");			
 		})
 
 		//Attach click event handler function to the button to convert clue
 		$("#convertBtn").click(function () {
-			if ($("#isCreateTransaction").prop("checked")) {//create transaction or not
-				$("#tranForm").submit();
-			} else {
-				window.location.href = "clue/convert?clueId=${param.id}";//detail.jsp?id=$ {clue.id}...
-			}
+			if ($("#isCreateTransaction").prop("checked")) $("#tranForm").submit();//create transaction or not
+			else window.location.href = "clue/convert?clueId=${param.id}";//detail.jsp?id=$ {clue.id}...
 		})
+
 	});
 </script>
 
@@ -104,7 +90,7 @@
 					<button type="button" class="close" data-dismiss="modal">
 						<span aria-hidden="true">×</span>
 					</button>
-					<h4 class="modal-title">搜索市场活动</h4>
+					<h4 class="modal-title">Search Activity</h4>
 				</div>
 				<div class="modal-body">
 					<div class="btn-group" style="position: relative; top: 18%; left: 8px;">
@@ -154,47 +140,45 @@
 	</div>
 	<div id="create-transaction2" style="position: relative; left: 40px; top: 20px; width: 80%; background-color: #F7F7F7; display: none;" >
 
-		//transaction form
+		<!-- transaction form -->
 		<form id="tranForm" action="clue/convert" method="post">
 			<input type="hidden" name="clueId" value="${param.id}"/>
-		  <div class="form-group" style="width: 400px; position: relative; left: 20px;">
-		    <label for="amountOfMoney">Amount of Money</label>
-		    <input type="text" class="form-control" id="amountOfMoney" name="money">
-		  </div>
-		  <div class="form-group" style="width: 400px;position: relative; left: 20px;">
-		    <label for="tradeName">Trade Name</label>
-		    <input type="text" class="form-control" id="tradeName" name="name">
-		  </div>
-		  <div class="form-group" style="width: 400px;position: relative; left: 20px;">
-		    <label for="expectedClosingDate">Expected Date</label>
-		    <input type="text" class="form-control time" id="expectedClosingDate" name="expectedDate">
-		  </div>
-		  <div class="form-group" style="width: 400px;position: relative; left: 20px;">
-		    <label for="stage">Stage</label>
-		    <select id="stage"  class="form-control" name="stage">
-		    	<option></option>
-				<c:forEach items="${stage}" var="dicValue" >
-					<option value="${dicValue.value}">${dicValue.value}</option>
-				</c:forEach>
-		    </select>
-		  </div>
-		  <div class="form-group" style="width: 400px;position: relative; left: 20px;">
-		    <label for="activityName">Activity Source&nbsp;&nbsp;<a href="javascript:void(0);" id="openSearchActivityModal" style="text-decoration: none;"><span class="glyphicon glyphicon-search"></span></a></label>
-		    <input type="text" class="form-control" id="activityName" name="source" placeholder="Search" readonly>
-			  <input type="hidden" id="activityId" name="activityId" />
-		  </div>
+			<div class="form-group" style="width: 400px; position: relative; left: 20px;">
+				<label for="amountOfMoney">Amount of Money</label>
+				<input type="text" class="form-control" id="amountOfMoney" name="money">
+			</div>
+			<div class="form-group" style="width: 400px;position: relative; left: 20px;">
+				<label for="tradeName">Trade Name</label>
+				<input type="text" class="form-control" id="tradeName" name="name">
+			</div>
+			<div class="form-group" style="width: 400px;position: relative; left: 20px;">
+				<label for="expectedClosingDate">Expected Date</label>
+				<input type="text" class="form-control time" id="expectedClosingDate" name="expectedDate" readonly />
+			</div>
+			<div class="form-group" style="width: 400px;position: relative; left: 20px;">
+				<label for="stage">Stage</label>
+				<select id="stage"  class="form-control" name="stage">
+					<option></option>
+					<c:forEach items="${stage}" var="dicValue" >
+						<option value="${dicValue.value}">${dicValue.value}</option>
+					</c:forEach>
+				</select>
+			</div>
+			<div class="form-group" style="width: 400px;position: relative; left: 20px;">
+				<label for="activityName">Activity Source&nbsp;&nbsp;<a href="javascript:void(0);" id="openSearchActivityModal" style="text-decoration: none;"><span class="glyphicon glyphicon-search"></span></a></label>
+				<input type="text" class="form-control" id="activityName" name="source" placeholder="Search" readonly>
+				<input type="hidden" id="activityId" name="activityId" />
+			</div>
 		</form>
 		
 	</div>
 	
 	<div id="owner" style="position: relative; left: 40px; height: 35px; top: 50px;">
-		Owner：<br>
-		<b>${param.owner}</b>
+		Owner：<b>${param.owner}</b>
 	</div>
 	<div id="operation" style="position: relative; left: 40px; height: 35px; top: 100px;">
-		<input id="convertBtn" class="btn btn-primary" type="button" value="Convert">
-		&nbsp;&nbsp;&nbsp;&nbsp;
-		<input class="btn btn-default" type="button" value="Cancel">
+		<input id="convertBtn" class="btn btn-primary" type="button" value="Convert">&nbsp;&nbsp;&nbsp;&nbsp;
+		<input class="btn btn-default" type="button" value="Cancel" onclick="window.history.back();">
 	</div>
 </body>
 </html>

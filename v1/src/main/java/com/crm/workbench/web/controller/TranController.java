@@ -1,5 +1,6 @@
 package com.crm.workbench.web.controller;
 
+import com.crm.exceptions.DaoException;
 import com.crm.settings.domain.User;
 import com.crm.settings.service.UserService;
 import com.crm.utils.DateTimeUtil;
@@ -7,6 +8,7 @@ import com.crm.utils.UUIDUtil;
 import com.crm.vo.Pagination;
 import com.crm.workbench.domain.Tran;
 import com.crm.workbench.domain.TranHistory;
+import com.crm.workbench.domain.TranRemark;
 import com.crm.workbench.service.CustomerService;
 import com.crm.workbench.service.TranService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @Controller
 @RequestMapping("/transaction")
 public class TranController {
+
     @Autowired
     private TranService tranService;
     @Autowired
@@ -32,23 +35,34 @@ public class TranController {
     @Autowired
     private CustomerService customerService;
 
-    @RequestMapping("/getOwner")
-    public ModelAndView getOwner(){//get <option>owner</option> for <select> element of workbench/transaction/save.jsp
+    @RequestMapping("/trans")
+    @ResponseBody
+    public Pagination<Tran> transList(Tran tran) {
+        try {
+            return tranService.tranList(tran);
+        } catch (DaoException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @RequestMapping("/owner")
+    public ModelAndView owner(){//get <option>owner</option> for <select> element of workbench/transaction/save.jsp
         ModelAndView mv = new ModelAndView();
         mv.addObject("uList",userService.getUserList());
         mv.setViewName("workbench/transaction/save");
         return mv;
     }
 
-    @RequestMapping("/getCustomerName")
+    @RequestMapping("/customer")
     @ResponseBody
-    public List<String> getCustomerName(String name){
-        return customerService.getCustomerName(name);
+    public List<String> customer(String name){
+        return customerService.autoComplete(name);
     }
 
-    @RequestMapping("/getPossibility")
+    @RequestMapping("/possibility")
     @ResponseBody
-    public Map<String,String> getPossibility(HttpServletRequest request){
+    public Map<String,String> possibility(HttpServletRequest request){
         ServletContext application = request.getServletContext();
         Map<String,String> s2pMap = (Map<String, String>) application.getAttribute("s2pMap");
         return s2pMap;
@@ -59,11 +73,13 @@ public class TranController {
         tran.setId(UUIDUtil.getUUID());
         tran.setCreateBy(((User)request.getSession(false).getAttribute("user")).getName());
         tran.setCreateTime(DateTimeUtil.getSysTime());
-        //customerName -> customerId
-        String customerName = request.getParameter("customerName");
-        boolean flag = tranService.add(tran,customerName);
-        if (flag) return "workbench/transaction/index";
-        else return null;
+        try {
+            tranService.save(tran);
+        } catch (DaoException e) {
+            e.printStackTrace();
+        } finally {
+            return "workbench/transaction/index";
+        }
     }
 
     @RequestMapping("/detail")
@@ -71,44 +87,59 @@ public class TranController {
         ModelAndView mv = new ModelAndView();
         Tran tran = tranService.detail(id);
         Map<String,String> map = (Map<String, String>) request.getServletContext().getAttribute("s2pMap");
-        tran.setPossibility(map.get(tran.getStage()));
+        tran.setPossibility(map.get(tran.getStage().substring(0,2)));
         mv.addObject("tran",tran);
         mv.setViewName("workbench/transaction/detail");
         return mv;
     }
 
-    @RequestMapping("/getTranHistory")
+    @RequestMapping("/remark")
     @ResponseBody
-    public List<TranHistory> getTranHistoryByTranId(HttpServletRequest request, String tranId){
-        List<TranHistory> list = tranService.getTranHistoryByTranId(tranId);
+    public List<TranRemark> remarkList(){
+
+        return null;
+    }
+
+    @RequestMapping("/history")
+    @ResponseBody
+    public List<TranHistory> historyList(HttpServletRequest request, String tranId){
+        List<TranHistory> list = tranService.historyList(tranId);
         Map<String,String> map = (Map<String, String>) request.getServletContext().getAttribute("s2pMap");
         for (TranHistory history:list) {
-            history.setPossibility(map.get(history.getStage()));
+            history.setPossibility(map.get(history.getStage().substring(0,2)));
         }
         return list;
     }
 
-    @RequestMapping("/changeStage")
+    @RequestMapping("/stage")
     @ResponseBody
-    public Map<String,Object> changeStage(HttpServletRequest request,Tran tran) {
+    public Tran stage(HttpServletRequest request,Tran tran,TranHistory tranHistory) {
         Map<String,String> s2pMap = (Map<String, String>) request.getServletContext().getAttribute("s2pMap");
-        tran.setPossibility(s2pMap.get(tran.getStage()));
+        tran.setPossibility(s2pMap.get(tran.getStage().substring(0,2)));
         tran.setEditBy(((User)request.getSession(false).getAttribute("user")).getName());
         tran.setEditTime(DateTimeUtil.getSysTime());
-        Map<String,Object> map = new HashMap<>();
-        map.put("tran",tran);
-        map.put("success",tranService.changeStage(tran)?"1":"0");
-        return map;
+
+        tranHistory.setId(UUIDUtil.getUUID());
+        tranHistory.setCreateBy(tran.getEditBy());
+        tranHistory.setCreateTime(tran.getEditTime());
+        tranHistory.setTranId(tran.getId());
+        try {
+            tranService.stage(tran,tranHistory);
+            return tran;
+        } catch (DaoException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
-    @RequestMapping("/charts")
+    @RequestMapping("/chart")
     @ResponseBody
     public Map<String,Object> charts() {
-        int total = tranService.total();
-        List<Map<String,Object>> dataList = tranService.dataList();
+        int max = tranService.max();
+        List<Map<String,String>> dataList = tranService.dataList();
         Map<String,Object> map = new HashMap<>();
-        map.put("total",total);
+        map.put("max",max);
         map.put("dataList",dataList);
         return map;
-    } //data.total | data.dataList
+    }
 }

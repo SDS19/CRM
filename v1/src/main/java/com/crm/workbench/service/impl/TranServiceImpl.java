@@ -1,6 +1,9 @@
 package com.crm.workbench.service.impl;
 
+import com.crm.exceptions.DaoException;
+import com.crm.utils.Convert;
 import com.crm.utils.UUIDUtil;
+import com.crm.vo.Pagination;
 import com.crm.workbench.dao.CustomerDao;
 import com.crm.workbench.dao.TranDao;
 import com.crm.workbench.dao.TranHistoryDao;
@@ -15,86 +18,80 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
-@Transactional
 @Service
 public class TranServiceImpl implements TranService {
+
+    @Autowired
+    private CustomerDao customerDao;
+
     @Autowired
     private TranDao tranDao;
     @Autowired
     private TranHistoryDao tranHistoryDao;
-    @Autowired
-    private CustomerDao customerDao;
 
     @Override
-    public boolean add(Tran tran, String customerName) {
-        int count = 0;
+    public Pagination<Tran> tranList(Tran tran) throws DaoException {
+        int total = tranDao.total(tran);
+        List<Tran> list = tranDao.tranList(tran);
+        if (total<=3 && list.size()!=total) throw new DaoException("Trans query failed!");
+        return new Pagination<>(total,list);
+    }
 
-        //if customerName exists or not (if not, create one)
-        Customer customer = customerDao.getCustomerByName(customerName);
-        if (customer==null) {
-            customer = new Customer();
-            customer.setId(UUIDUtil.getUUID());
-            customer.setOwner(tran.getOwner());
-            customer.setName(customerName);
-            customer.setCreateBy(tran.getCreateBy());
-            customer.setCreateTime(tran.getCreateTime());
-            customer.setContactSummary(tran.getContactSummary());
-            customer.setNextContactTime(tran.getNextContactTime());
-            customer.setDescription(tran.getDescription());
-            count += customerDao.addCustomer(customer);
+    @Override
+    public void save(Tran tran) throws DaoException {
+        //if customerName does not exist, create one
+        Customer customer = null;
+        if (customerDao.select(tran.getCustomerId())==null) {
+            try {
+                customer = (Customer) Convert.o2o(tran,new Customer());
+                customer.setId(UUIDUtil.getUUID());
+                customer.setName(tran.getCustomerId());
+                if (customerDao.insert(customer)!=1) throw new DaoException("Create customer failed!");
+            } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+                e.printStackTrace();
+            }
         }
 
-        //create transaction and its history
+        //create transaction
         tran.setCustomerId(customer.getId());
-        count += tranDao.add(tran);
-        TranHistory tranHistory = new TranHistory();
-        tranHistory.setId(UUIDUtil.getUUID());
-        tranHistory.setStage(tran.getStage());
-        tranHistory.setMoney(tran.getMoney());
-        tranHistory.setExpectedDate(tran.getExpectedDate());
-        tranHistory.setCreateTime(tran.getCreateTime());
-        tranHistory.setCreateBy(tran.getCreateBy());
-        tranHistory.setTranId(tran.getId());
-        count += tranHistoryDao.add(tranHistory);
+        if (tranDao.insert(tran)!=1) throw new DaoException("Create transaction failed!");
 
-        return count==3;
+        //create transaction history
+        try {
+            TranHistory tranHistory = (TranHistory) Convert.o2o(tran,new TranHistory());
+            tranHistory.setId(UUIDUtil.getUUID());
+            tranHistory.setTranId(tran.getId());
+            if (tranHistoryDao.insert(tranHistory)!=1) throw new DaoException("Create transaction history failed!");
+        } catch (ClassNotFoundException|IllegalAccessException|InstantiationException|NoSuchFieldException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public Tran detail(String id) {
-        return tranDao.getTranById(id);
+        return tranDao.select(id);
     }
 
     @Override
-    public List<TranHistory> getTranHistoryByTranId(String tranId) {
-        return tranHistoryDao.getTranHistoryByTranId(tranId);
+    public List<TranHistory> historyList(String tranId) {
+        return tranHistoryDao.select(tranId);
+    }
+
+    @Transactional
+    @Override
+    public void stage(Tran tran,TranHistory tranHistory) throws DaoException {
+        if (tranDao.update(tran)!=1) throw new DaoException("Change stage failed!");
+        if (tranHistoryDao.insert(tranHistory)!=1) throw new DaoException("Create transaction stage history failed!");
+    }
+
+    //ECharts data
+    @Override
+    public int max() {
+        return tranDao.max();
     }
 
     @Override
-    public boolean changeStage(Tran tran) {
-        int count = 0;
-        //change transaction stage
-        count += tranDao.changeStage(tran);
-        //log transaction history
-        TranHistory tranHistory = new TranHistory();
-        tranHistory.setId(UUIDUtil.getUUID());
-        tranHistory.setStage(tran.getStage());
-        tranHistory.setMoney(tran.getMoney());
-        tranHistory.setExpectedDate(tran.getExpectedDate());
-        tranHistory.setCreateTime(tran.getCreateTime());
-        tranHistory.setCreateBy(tran.getCreateBy());
-        tranHistory.setTranId(tran.getId());
-        count += tranHistoryDao.add(tranHistory);
-        return count==2;
-    }
-
-    //charts
-    @Override
-    public int total() {
-        return tranDao.total();
-    }
-    @Override
-    public List<Map<String, Object>> dataList() {
+    public List<Map<String, String>> dataList() {
         return tranDao.dataList();
     }
 }

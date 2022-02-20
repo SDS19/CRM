@@ -6,12 +6,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <% String base = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath() + "/"; %>
 <% 
-	List<DicValue> dicValueList = (List<DicValue>) application.getAttribute("stage");
-	Map<String,String> s2pMap = (Map<String, String>) application.getAttribute("s2pMap");
-	Set<String> keySet = s2pMap.keySet();
+	List<DicValue> stageList = (List<DicValue>) application.getAttribute("stage");
+	Map<String,String> s2pMap = (Map<String, String>) application.getAttribute("s2pMap");//01-10, ... ,07-100
 	int index = 0;
-	for (int i = 0; i < dicValueList.size(); i++) {
-		String stage = dicValueList.get(i).getValue();
+	for (int i = 0; i < stageList.size(); i++) {//find boundary index
+		String stage = stageList.get(i).getValue().substring(0,2);
 		String possibility = s2pMap.get(stage);
 		if ("0".equals(possibility)) {
 			index = i;
@@ -26,7 +25,6 @@
 	<meta charset="UTF-8">
 
 <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
-
 <style type="text/css">
 .mystage{
 	font-size: 20px;
@@ -39,30 +37,24 @@
 	vertical-align: middle;
 }
 </style>
-	
 <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
 <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
-
 <script type="text/javascript">
 
-	//默认情况下取消和保存按钮是隐藏的
 	var cancelAndSaveBtnDefault = true;
 	
 	$(function(){
+
 		$("#remark").focus(function(){
 			if(cancelAndSaveBtnDefault){
-				//设置remarkDiv的高度为130px
 				$("#remarkDiv").css("height","130px");
-				//显示
 				$("#cancelAndSaveBtn").show("2000");
 				cancelAndSaveBtnDefault = false;
 			}
 		});
 		
 		$("#cancelBtn").click(function(){
-			//显示
 			$("#cancelAndSaveBtn").hide();
-			//设置remarkDiv的高度为130px
 			$("#remarkDiv").css("height","90px");
 			cancelAndSaveBtnDefault = true;
 		});
@@ -70,7 +62,6 @@
 		$(".remarkDiv").mouseover(function(){
 			$(this).children("div").children("div").show();
 		});
-		
 		$(".remarkDiv").mouseout(function(){
 			$(this).children("div").children("div").hide();
 		});
@@ -78,12 +69,10 @@
 		$(".myHref").mouseover(function(){
 			$(this).children("span").css("color","red");
 		});
-		
 		$(".myHref").mouseout(function(){
 			$(this).children("span").css("color","#E6E6E6");
 		});
-		
-		
+
 		//stage prompt
 		$(".mystage").popover({
             trigger:'manual',
@@ -104,15 +93,44 @@
                         }
                     }, 100);
                 });
+
+		tranRemarkList();
+
 		tranHistoryList();
+
 	});
+	
+	function tranRemarkList() {
+		$.ajax({
+			url: "transaction/remark",
+			data:{	"tranId":"${tran.id}" },
+			type: "get",
+			dataType: "json",
+			success: function (data) {
+				var html = "";
+				$.each(data,function (i,obj) {
+					html += '<div class="remarkDiv" style="height: 60px;">'
+							+'<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">'
+							+'<div style="position: relative; top: -40px; left: 40px;" >'
+							+'<h5>'+obj.noteContent+'</h5>'
+							+'<font color="gray">Transaction</font>'
+							+'<font color="gray">-</font> <b>${tran.customerId} - ${tran.name}</b>'
+							+'<small style="color: gray;"> '+(obj.editFlag==0 ? obj.createTime : obj.editTime)+' by '+(obj.editFlag==0 ? obj.createBy : obj.editBy)+'</small>'
+							+'<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">'
+							+'<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #E6E6E6;"></span></a>'
+							+'&nbsp;&nbsp;&nbsp;&nbsp;'
+							+'<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #E6E6E6;"></span></a>'
+							+'</div></div></div>';
+				})
+				$("#tranHistoryTable").html(html);
+			}
+		})
+	}
 	
 	function tranHistoryList() {
 		$.ajax({
-			url: "transaction/getTranHistory",
-			data:{
-				"tranId":"${tran.id}"
-			},
+			url: "transaction/history",
+			data:{	"tranId":"${tran.id}" },
 			type: "get",
 			dataType: "json",
 			success: function (data) {
@@ -128,41 +146,34 @@
 				$("#tranHistoryTable").html(html);
 			}
 		})
-
 	}
 
-	//change transaction stage
 	function changeStage(stage,i) {
-		confirm("Are you sure to change the stage?");
-		$.ajax({
-			url: "transaction/changeStage",
-			data:{
-				"id":"${tran.id}",
-				"stage":stage,
-				"money":"${tran.money}",//tranHistory
-				"expectedDate":"${tran.expectedDate}"//tranHistory
-			},
-			type: "post",
-			dataType: "json",
-			success: function (data) {
-				if (data.success=="1") {
-					//fresh stage, possibility, editBy, editTime
-					$("#stage").html(data.tran.stage);
-					$("#possibility").html(data.tran.possibility);
-					$("#editBy").html(data.tran.editBy+"&nbsp;&nbsp;");
-					$("#editTime").html(data.tran.editTime);
-					//fresh icon
-					chanegIcon(stage,i);
-				} else {
-					alert("Stage change failed!");
+		if (confirm("Are you sure to change the stage?")) {
+			$.ajax({
+				url: "transaction/stage",
+				data:{
+					"id":"${tran.id}",
+					"stage":stage,
+					"money":"${tran.money}",//tranHistory
+					"expectedDate":"${tran.expectedDate}"//tranHistory
+				},
+				type: "post",
+				dataType: "json",
+				success: function (data) {
+					if (data!=null) {
+						$("#stage").html(data.stage);
+						$("#possibility").html(data.possibility);
+						$("#editBy").html(data.editBy+"&nbsp;&nbsp;");
+						$("#editTime").html(data.editTime);
+						changeIcon(stage,i);
+					} else alert("Stage change failed!");
 				}
-			}
-		})
+			})
+		}
 	}
-	
-	//fresh icon
-	function chanegIcon(stage,idx) {
-		var currentStage = stage;
+
+	function changeIcon(stage,idx) {
 		var currentPossibility = $("#possibility").html();
 		var index = idx;//stage index
 		var point = "<%=index%>";
@@ -172,7 +183,7 @@
 				$("#"+i).addClass("glyphicon glyphicon-record mystage");//add new class
 				$("#"+i).css("color","#000000");//change color
 			}
-			for (var i=point;i<<%=dicValueList.size()%>;i++) {
+			for (var i=point;i<<%=stageList.size()%>;i++) {
 				if (i==index) { //current stage (red X)
 					$("#"+i).removeClass();
 					$("#"+i).addClass("glyphicon glyphicon-remove mystage");
@@ -199,24 +210,26 @@
 					$("#"+i).css("color","#000000");//change color
 				}
 			}
-			for (var i=point;i<<%=dicValueList.size()%>;i++) {//black X
+			for (var i=point;i<<%=stageList.size()%>;i++) {//black X
 				$("#"+i).removeClass();
 				$("#"+i).addClass("glyphicon glyphicon-remove mystage");
 				$("#"+i).css("color","#000000");
 			}
 		}
+		tranHistoryList();
 	}
+
 </script>
 
 </head>
 <body>
 	
-	<!-- 返回按钮 -->
+	<!-- back back -->
 	<div style="position: relative; top: 35px; left: 10px;">
 		<a href="javascript:void(0);" onclick="window.history.back();"><span class="glyphicon glyphicon-arrow-left" style="font-size: 20px; color: #DDDDDD"></span></a>
 	</div>
 	
-	<!-- 大标题 -->
+	<!-- titel -->
 	<div style="position: relative; left: 40px; top: -30px;">
 		<div class="page-header">
 			<h3>${tran.customerId}-${tran.name} <small>￥${tran.money}</small></h3>
@@ -233,16 +246,16 @@
 		<%
 			//current stage and possibility
 			Tran tran = (Tran) request.getAttribute("tran");
-			String currentStage = tran.getStage();
+			String currentStage = tran.getStage().substring(0,2);//01 ... ...
 			String currentPossibility = tran.getPossibility();
-			if ("0".equals(currentPossibility)) {
+			if ("0".equals(currentPossibility)) {// 7 black X
 				//compare every stage with current stage
-				for (int i = 0; i < dicValueList.size(); i++) {
-					DicValue dicValue = dicValueList.get(i);
+				for (int i = 0; i < stageList.size(); i++) {
+					DicValue dicValue = stageList.get(i);//dicValue = {id,value,text,orderNo,typeCode}
 					String stage = dicValue.getValue();
 					String possibility = s2pMap.get(stage);
 					if ("0".equals(possibility)) {
-						if (stage.equals(currentStage)) {//red X
+						if (currentStage.equals(stage)) {//red X
 		%>
 		<span id="<%=i%>" onclick="changeStage('<%=stage%>','<%=i%>')"
 			  class="glyphicon glyphicon-remove mystage" data-toggle="popover"
@@ -263,16 +276,15 @@
 				}
 			} else { //current stage possibility is not 0
 				//get index of current stage
-				for (int i = 0; i < dicValueList.size(); i++) {
-					String stage = dicValueList.get(i).getValue();
-					String possibility = s2pMap.get(stage);
-					if (stage.equals(currentStage)) {
+				for (int i = 0; i < stageList.size(); i++) {
+					String stage = stageList.get(i).getValue();
+					if (currentStage.equals(stage)) {
 						index = i;
 						break;
 					}
 				}
-				for (int i = 0; i < dicValueList.size(); i++) {
-					DicValue dicValue = dicValueList.get(i);
+				for (int i = 0; i < stageList.size(); i++) {
+					DicValue dicValue = stageList.get(i);
 					String stage = dicValue.getValue();
 					String possibility = s2pMap.get(stage);
 					if ("0".equals(possibility)) {//black X
@@ -415,32 +427,9 @@
 			<h4>Remark</h4>
 		</div>
 		
-		<!-- 备注1 -->
-		<div class="remarkDiv" style="height: 60px;">
-			<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">
-			<div style="position: relative; top: -40px; left: 40px;" >
-				<h5>哎呦！</h5>
-				<font color="gray">交易</font> <font color="gray">-</font> <b>动力节点-交易01</b> <small style="color: gray;"> 2017-01-22 10:10:10 由zhangsan</small>
-				<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #E6E6E6;"></span></a>
-					&nbsp;&nbsp;&nbsp;&nbsp;
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #E6E6E6;"></span></a>
-				</div>
-			</div>
-		</div>
-		
-		<!-- 备注2 -->
-		<div class="remarkDiv" style="height: 60px;">
-			<img title="zhangsan" src="image/user-thumbnail.png" style="width: 30px; height:30px;">
-			<div style="position: relative; top: -40px; left: 40px;" >
-				<h5>呵呵！</h5>
-				<font color="gray">交易</font> <font color="gray">-</font> <b>动力节点-交易01</b> <small style="color: gray;"> 2017-01-22 10:20:10 由zhangsan</small>
-				<div style="position: relative; left: 500px; top: -30px; height: 30px; width: 100px; display: none;">
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-edit" style="font-size: 20px; color: #E6E6E6;"></span></a>
-					&nbsp;&nbsp;&nbsp;&nbsp;
-					<a class="myHref" href="javascript:void(0);"><span class="glyphicon glyphicon-remove" style="font-size: 20px; color: #E6E6E6;"></span></a>
-				</div>
-			</div>
+		<!-- remark1 -->
+		<div id="tranRemark">
+
 		</div>
 		
 		<div id="remarkDiv" style="background-color: #E6E6E6; width: 870px; height: 90px;">

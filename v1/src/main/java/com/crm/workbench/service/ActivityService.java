@@ -5,23 +5,39 @@ import com.crm.vo.Pagination;
 import com.crm.workbench.domain.Activity;
 import com.crm.workbench.domain.ActivityRemark;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public interface ActivityService {
-    boolean saveActivity(Activity activity) throws DaoException;
 
-    Pagination<Activity> pageList(Activity activity);
+    /* ========================================= activity method ========================================= */
 
-    boolean deleteActivities(String[] ids);
-    Map<String,Object> getActivityUserList(String id);
-    boolean updateActivity(Activity activity);
-    Activity selectActivity(String id);
-    List<ActivityRemark> remarks(String activityId);
-    boolean removeRemark(String id);
-    int addRemark(ActivityRemark remark);
-    int updateRemark(ActivityRemark remark);
+    void save(Activity activity) throws DaoException;
+
+    Pagination<Activity> pageList(Activity activity) throws DaoException;
+
+    void delete(String[] ids) throws DaoException;
+
+    Map<String,Object> edit(String id);
+
+    void update(Activity activity) throws DaoException;
+
+    Activity detail(String id);
+
     List<Activity> getActivitiesByClueId(String clueId);
-    List<Activity> getActivitiesByName(String name,String clueId);
-    List<Activity> getActivitiesByName(String name);
+
+    List<Activity> getActivitiesForClue(HashMap<String,String> map);
+
+    List<Activity> getActivitiesForTran(String name);
+
+    /* ========================================= remark method ========================================= */
+
+    List<ActivityRemark> select(String activityId);
+
+    void removeRemark(String id) throws DaoException;
+
+    void addRemark(ActivityRemark remark) throws DaoException;
+
+    void updateRemark(ActivityRemark remark) throws DaoException;
 }

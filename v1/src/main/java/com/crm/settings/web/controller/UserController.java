@@ -24,22 +24,23 @@ public class UserController {
     @RequestMapping("/login")
     @ResponseBody
     public Map<String,String> login(HttpServletRequest request, User user) {
-        //User object contains loginAct, loginPwd, ip
-        user.setLoginPwd(MD5Util.getMD5(user.getLoginPwd()));//MD5 encrypted
+        //user contains loginAct, loginPwd, ip
+        user.setLoginPwd(MD5Util.getMD5(user.getLoginPwd()));
         user.setAllowIps(request.getRemoteAddr());
-
         Map<String,String> map = new HashMap<>();
         try {
             request.getSession(true).setAttribute("user",userService.login(user));
             map.put("success","1");
         }catch (Exception e){
+            e.printStackTrace();
             map.put("success","0");
             map.put("msg",e.getMessage());
+        } finally {
+            return map;
         }
-        return map;
     }
 
-    @RequestMapping("/getOwner")
+    @RequestMapping("/owner")
     @ResponseBody
     public List<User> getOwner() {
         return userService.getUserList();

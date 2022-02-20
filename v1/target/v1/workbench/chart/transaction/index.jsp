@@ -8,12 +8,12 @@
     <script src="jquery/jquery-1.11.1-min.js"></script>
     <script>
         $(function () {
-            getCharts();
+            charts();
         })
-        function getCharts() {
+        function charts() {
             var myChart = echarts.init(document.getElementById('main'));
             $.ajax({
-                url: "transaction/charts",
+                url: "transaction/chart",
                 type: "get",
                 dataType: "json",
                 success: function (data) {

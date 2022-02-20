@@ -1,5 +1,6 @@
 package com.crm.workbench.web.controller;
 
+import com.crm.exceptions.DaoException;
 import com.crm.settings.domain.User;
 import com.crm.utils.DateTimeUtil;
 import com.crm.utils.UUIDUtil;
@@ -21,8 +22,23 @@ import java.util.Map;
 @Controller
 @RequestMapping("/activity")
 public class ActivityController {
+
     @Autowired
     private ActivityService activityService;
+
+    /* ========================================= activity controller ========================================= */
+
+    @RequestMapping("/activities")
+    @ResponseBody
+    public Pagination<Activity> activityList(Integer pageNo, Integer pageSize, Activity activity){
+        activity.setPageCount((pageNo-1)*pageSize);
+        try {
+            return activityService.pageList(activity);
+        } catch (DaoException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
     @RequestMapping("/save")
     @ResponseBody
@@ -31,95 +47,101 @@ public class ActivityController {
         activity.setCreateTime(DateTimeUtil.getSysTime());
         activity.setCreateBy(((User)request.getSession(false).getAttribute("user")).getName());
         try {
-            return activityService.saveActivity(activity) ? "1":"0";
+            activityService.save(activity);
+            return "1";
         } catch (Exception e) {
+            e.printStackTrace();
             return "0";
         }
-    }
-
-    @RequestMapping("/list")
-    @ResponseBody
-    public Pagination<Activity> activityList(Integer pageNo, Integer pageSize, Activity activity){
-        activity.setPageCount((pageNo-1)*pageSize);
-        activity.setPageSize(pageSize);
-        Pagination<Activity> page = activityService.pageList(activity);
-        return page;
     }
 
     @RequestMapping("/delete")
     @ResponseBody
     public String delete(HttpServletRequest request) {
         String[] ids = request.getParameterValues("id");
-        boolean success = activityService.deleteActivities(ids);
-        return success ? "1" : "0";
+        try {
+            activityService.delete(ids);
+            return "1";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "0";
+        }
     }
 
     @RequestMapping("/edit")
     @ResponseBody
     public Map<String,Object> edit(String id){
-        return activityService.getActivityUserList(id);
+        return activityService.edit(id);
     }
+
     @RequestMapping("/update")
     @ResponseBody
     public String update(HttpServletRequest request,Activity activity){
-        System.out.println("=========="+activity.getOwner());
         activity.setEditTime(DateTimeUtil.getSysTime());
         activity.setEditBy(((User)request.getSession(false).getAttribute("user")).getName());
-        boolean success = activityService.updateActivity(activity);
-        return success ? "1" : "0";
+        try {
+            activityService.update(activity);
+            return "1";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "0";
+        }
     }
 
     @RequestMapping("/detail")
     public ModelAndView detail(String id) {
         ModelAndView mv = new ModelAndView();
-        mv.addObject("activity",activityService.selectActivity(id));
+        mv.addObject("activity",activityService.detail(id));
         mv.setViewName("workbench/activity/detail");
         return mv;
     }
 
-    @RequestMapping("/remark")
+    /* ========================================== remark controller ========================================== */
+
+    @RequestMapping("/remarks")
     @ResponseBody
     public List<ActivityRemark> remarkList(String activityId){
-        return activityService.remarks(activityId);
+        return activityService.select(activityId);
     }
 
     @RequestMapping("/removeRemark")
     @ResponseBody
     public String removeRemark(String id){
-        boolean success = activityService.removeRemark(id);
-        return success ? "1" : "0";
+        try {
+            activityService.removeRemark(id);
+            return "1";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "0";
+        }
     }
 
     @RequestMapping("/addRemark")
     @ResponseBody
-    public Map<String,Object> addRemark(HttpServletRequest request, String noteContent, String activityId){
-        ActivityRemark remark = new ActivityRemark();
+    public Object addRemark(HttpServletRequest request, ActivityRemark remark){
         remark.setId(UUIDUtil.getUUID());
-        remark.setNoteContent(noteContent);
         remark.setCreateTime(DateTimeUtil.getSysTime());
         remark.setCreateBy(((User) request.getSession(false).getAttribute("user")).getName());
-        remark.setEditFlag("0");
-        remark.setActivityId(activityId);
-
-        Map<String,Object> map = new HashMap<>();
-        map.put("success",activityService.addRemark(remark));
-        map.put("remark",remark);
-        return map;
+        try {
+            activityService.addRemark(remark);
+            return remark;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @RequestMapping("/updateRemark")
     @ResponseBody
-    public Map<String,Object> updateRemark(HttpServletRequest request, String id, String noteContent){
-        ActivityRemark remark = new ActivityRemark();
-        remark.setId(id);
-        remark.setNoteContent(noteContent);
+    public Object updateRemark(HttpServletRequest request, ActivityRemark remark){
         remark.setEditTime(DateTimeUtil.getSysTime());
         remark.setEditBy(((User) request.getSession(false).getAttribute("user")).getName());
-
-        Map<String,Object> map = new HashMap<>();
-        map.put("success", activityService.updateRemark(remark)==1 ? "1":"0");
-        map.put("remark",remark);
-
-        return map;
+        try {
+            activityService.updateRemark(remark);
+            return remark;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

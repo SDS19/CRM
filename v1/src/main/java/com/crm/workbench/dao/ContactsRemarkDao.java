@@ -4,5 +4,6 @@ import com.crm.workbench.domain.ContactsRemark;
 
 public interface ContactsRemarkDao {
 
-    int addContact(ContactsRemark contactsRemark);
+    int insert(ContactsRemark contactsRemark);
+
 }
